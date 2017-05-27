@@ -10,7 +10,7 @@
 #include <ArduinoJson.h>
 #include <CMMC_Blink.hpp>
 
-  #define CMMC_DEBUG_SERIAL 1
+#define CMMC_DEBUG_SERIAL 1
 #if CMMC_DEBUG_SERIAL
     #define CMMC_DEBUG_PRINTER Serial
     #define CMMC_DEBUG_PRINT(...) { CMMC_DEBUG_PRINTER.print(__VA_ARGS__); }
@@ -177,7 +177,7 @@ void setup(){
         CMMC_DEBUG_PRINT(" 0x");
         CMMC_DEBUG_PRINT(data[i], HEX);
       }
-      
+
       CMMC_DEBUG_PRINT(data[0], DEC);
       CMMC_DEBUG_PRINTLN("");
       digitalWrite(LED_BUILTIN, data[0]);

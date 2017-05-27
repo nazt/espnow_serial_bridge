@@ -29,7 +29,7 @@ Ticker ticker;
 uint8_t self_ap_slave_macaddr[6];
 uint8_t self_sta_master_macaddr[6];
 
-byte buff[50];
+uint8_t buff[50];
 
 // SOFTAP_IF
 void printMacAddress(uint8_t* macaddr) {
@@ -77,6 +77,9 @@ void setup() {
 
   swSerial.println("ESPNOW SEND HELLO");
   swSerial.write("HELLO", 5);
+
+  bzero(buff, sizeof(buff));
+
 
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb([](uint8_t *macaddr, uint8_t *data, uint8_t len) {
@@ -129,28 +132,30 @@ void setup() {
     buff[1] = 0xFD;
     printMacAddress(self_sta_master_macaddr);
     printMacAddress(client_slave_macaddr);
-    
+
     memcpy(buff+2, self_sta_master_macaddr, 6);
     memcpy(buff+6+2, client_slave_macaddr, 6);
-    memcpy(buff+6+2+6, data, len);
+    // memcpy(buff+6+2+1, len, 1);
+    Serial.printf("len = %d==%02x\r\n", len, len);
+    buff[6+6+2] = len;
+    memcpy(buff+6+2+6+1, data, len);
 
-    // swSerial.write(0xFC);
-    // swSerial.write(0xFD);
-    // swSerial.write(self_sta_master_macaddr, 6);
-    swSerial.write(client_slave_macaddr, 6);
-    swSerial.write(data, len);
-
-    byte sum2 = 0x00;
+    byte sum2 = 0;
     for (size_t i = 1; i <= len+2+6+6; i++) {
+      sum2 ^= buff[i-1];
+      // Serial.printf("idx: %d, buff = %02x, sum2 = %02x \r\n", i, buff[i-1], sum2);
+    }
+    buff[len+2+6+6] = sum2;
+
+    Serial.println("===============");
+    Serial.printf("CHECK SUM 2 = %02x \r\n", sum2);
+    for (size_t i = 1; i <= len+2+6+6+1; i++) {
       Serial.printf("%02x ", buff[i-1]);
       if (i == 2 || i == 6+2 || i == 6+2+6) {
         Serial.println();
       }
-      sum2 ^= buff[i-1];
     }
-
-    Serial.println();
-    Serial.printf("CHECK SUM 2 = %02x \r\n", sum2);
+    swSerial.write(buff, len+2+6+6+1);
     swSerial.write('\r');
   });
 
