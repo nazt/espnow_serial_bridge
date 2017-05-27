@@ -124,10 +124,12 @@ void setup() {
     //snprintf(mac, 32, "%02x:%02x:%02x:%02x:%02x:%02x", MAC2STR(macaddr));
     // Serial.printf("mac: %s\r\n", mac);
     // swSerial.write(mac, 32);
+
     buff[0] = 0xFC;
     buff[1] = 0xFD;
     printMacAddress(self_sta_master_macaddr);
     printMacAddress(client_slave_macaddr);
+    
     memcpy(buff+2, self_sta_master_macaddr, 6);
     memcpy(buff+6+2, client_slave_macaddr, 6);
     memcpy(buff+6+2+6, data, len);
