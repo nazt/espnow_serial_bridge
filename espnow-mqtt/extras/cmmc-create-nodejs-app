@@ -1,0 +1,12 @@
+#! /bin/bash
+
+if [ $# -ne 1 ]; then
+    echo $0: usage: cmmc-create-nodejs-app.sh project-name
+    exit 1
+fi
+
+name=$1
+
+git clone https://github.com/cmmakerclub/gulp-es6-nodejs-template.git $name
+cd $name
+yarn
