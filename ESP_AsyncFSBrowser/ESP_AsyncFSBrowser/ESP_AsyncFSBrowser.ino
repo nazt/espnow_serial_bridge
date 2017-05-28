@@ -33,7 +33,12 @@ extern "C" {
 #include <DHT.h>
 #include <DHT_U.h>
 
-ADC_MODE(ADC_VCC);
+#include <Ultrasonic.h>
+
+int trigpin = 4;//appoint trigger pin
+int echopin = 5;//appoint echo pin
+
+Ultrasonic ultrasonic(trigpin,echopin);
 
 #define DHTPIN            12
 uint32_t delayMS;
@@ -73,6 +78,8 @@ bool longpressed = false;
 
 
 void setup(){
+
+  pinMode(0, OUTPUT);
   Serial.begin(115200);
   Serial.setDebugOutput(true);
   initBattery();
@@ -212,31 +219,32 @@ uint8_t message[MESSAGE_SIZE] = {0};
 void loop(){
   bzero(message, sizeof(message));
   ArduinoOTA.handle();
-  // Delay between measurements.
-  delay(delayMS);
-  // Get temperature event and print its value.
-  sensors_event_t event;
-  dht.temperature().getEvent(&event);
-  if (isnan(event.temperature)) {
-    Serial.println("Error reading temperature!");
-  }
-  else {
-    Serial.print("Temperature: ");
-    Serial.print(event.temperature);
-    Serial.println(" *C");
-  }
-  uint32_t temperature_uint32 = (uint32_t)(event.temperature*100);
-  // Get humidity event and print its value.
-  dht.humidity().getEvent(&event);
-  if (isnan(event.relative_humidity)) {
-    Serial.println("Error reading humidity!");
-  }
-  else {
-    Serial.print("Humidity: ");
-    Serial.print(event.relative_humidity);
-    Serial.println("%");
-  }
-  uint32_t humidity_uint32 = (uint32_t)(event.relative_humidity*100);
+  uint32_t temperature_uint32  = 0;
+  // // Delay between measurements.
+  // delay(delayMS);
+  // // Get temperature event and print its value.
+  // sensors_event_t event;
+  // dht.temperature().getEvent(&event);
+  // if (isnan(event.temperature)) {
+  //   Serial.println("Error reading temperature!");
+  // }
+  // else {
+  //   Serial.print("Temperature: ");
+  //   Serial.print(event.temperature);
+  //   Serial.println(" *C");
+  // }
+  // uint32_t temperature_uint32 = (uint32_t)(event.temperature*100);
+  // // Get humidity event and print its value.
+  // dht.humidity().getEvent(&event);
+  // if (isnan(event.relative_humidity)) {
+  //   Serial.println("Error reading humidity!");
+  // }
+  // else {
+  //   Serial.print("Humidity: ");
+  //   Serial.print(event.relative_humidity);
+  //   Serial.println("%");
+  // }
+  // uint32_t humidity_uint32 = (uint32_t)(event.relative_humidity*100);
 
   if (digitalRead(13) == HIGH) {
     Serial.println("BUTTON PRESSED.");
@@ -246,7 +254,7 @@ void loop(){
 
     message[2] = 0x01;
     message[3] = 0x01;
-    message[4] = 0x01;
+    message[4] = 0x02;
 
     // UUID
     message[5]  = 'a';
@@ -256,10 +264,16 @@ void loop(){
     message[9]  = '0';
     message[10] = '1';
 
-    int battery = getBatteryVoltage();
+
+
+  	uint32_t cmdistance =ultrasonic.distanceRead();//this result unit is centimeter
+
+
+    pinMode(A0, INPUT);
+    uint32_t battery = (analogRead(A0) * 5000) / 880;
 
     memcpy(message+11, (const void*)&temperature_uint32, 4);
-    memcpy(message+15, (const void*)&humidity_uint32, 4);
+    memcpy(message+15, (const void*)&cmdistance, 4);
     // memcpy(message+19, {0}, 4);
     memcpy(message+23, (const void*)&battery, 4);
     byte sum = 0;
@@ -269,12 +283,14 @@ void loop(){
     message[MESSAGE_SIZE-1] = sum;
 
     Serial.printf("temp: %02x - %lu\r\n", temperature_uint32, temperature_uint32);
-    Serial.printf("humid: %02x - %lu \r\n", humidity_uint32, humidity_uint32);
-    Serial.printf("batt: %02x - %lu \r\n", battery, battery);
+    Serial.printf("distance:  %d \r\n", cmdistance);
+    Serial.printf("batt: %d \r\n", battery);
 
     // uint8_t master_mac2[] = {0x18,0xFE,0x34,0xEE,0xA0,0xF9};
     esp_now_send(master_mac, message, sizeof(message));
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(50);
+
+    ESP.deepSleep(1000000*9); // 10 sec
+
   }
 }
