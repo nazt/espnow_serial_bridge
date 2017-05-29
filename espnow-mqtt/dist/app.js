@@ -69,8 +69,8 @@ client.on('message', function (topic, message) {
         console.log('val3 = ', val3);
         console.log('batt = ', batt);
         console.log('[master] mac1 = ', mac1String);
-
         console.log('[ slave] mac2 = ', mac2String);
+
         client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/val1', val1.toString());
         client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/val2', val2.toString());
         client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/batt', batt.toString());
@@ -87,4 +87,6 @@ client.on('message', function (topic, message) {
     console.log('invalid checksum');
   }
 });
+
+console.log('started');
 //# sourceMappingURL=app.js.map

@@ -155,8 +155,12 @@ void setup() {
         Serial.println();
       }
     }
+
+    Serial.println();
+    Serial.printf("free heap = %lu \r\n", ESP.getFreeHeap());
     swSerial.write(buff, len+2+6+6+1);
     swSerial.write('\r');
+    swSerial.write('\n');
   });
 
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
