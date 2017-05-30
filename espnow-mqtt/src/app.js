@@ -29,6 +29,7 @@ client.on('message', function (topic, message) {
   console.log('================')
   console.log(message.length)
 
+  let statusObject = {}
   if (checksum(message)) {
     let mac1, mac2
     if (message[0] === 0xfc && message[1] === 0xfd) {
@@ -62,14 +63,21 @@ client.on('message', function (topic, message) {
         console.log(`[master] mac1 = `, mac1String)
         console.log(`[ slave] mac2 = `, mac2String)
 
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/val1`, val1.toString())
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/val2`, val2.toString())
+        statusObject.myName = name.toString()
+        statusObject.type = type.toString('hex')
+        statusObject.sensor = type.toString('hex')
+        statusObject.val1 = val1.toString()
+        statusObject.val2 = val2.toString()
+        statusObject.val3 = val3.toString()
+        statusObject.batt = batt.toString()
+        statusObject.mac1 = mac1String
+        statusObject.mac2 = mac2String
+        statusObject.updated = moment().unix().toString()
+        statusObject.updatedText = moment().format('MMMM Do YYYY, h:mm:ss a')
+
         client.publish(`CMMC/espnow/${mac1String}/${mac2String}/batt`, batt.toString())
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/val3`, val3.toString())
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/nickname`, name.toString())
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/sensor`, type.toString('hex'))
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/updated`, moment().unix().toString())
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/updatedText`, moment().format('MMMM Do YYYY, h:mm:ss a'))
+        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/status`, JSON.stringify(statusObject))
+        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/${name.toString()}`, JSON.stringify(statusObject))
       } else {
         console.log('invalid header')
       }
