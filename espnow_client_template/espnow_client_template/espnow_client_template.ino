@@ -29,10 +29,6 @@ extern "C" {
   #include <espnow.h>
   #include <user_interface.h>
 }
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
-
 #include <Ultrasonic.h>
 
 int trigpin = 4;//appoint trigger pin
@@ -46,24 +42,15 @@ int runMode = MODE_ESPNOW;
 
 Ultrasonic ultrasonic(trigpin,echopin);
 
-#define DHTPIN            12
-uint32_t delayMS;
 // Uncomment the type of sensor in use:
-//#define DHTTYPE         DHT11     // DHT 11
-#define DHTTYPE           DHT22     // DHT 22 (AM2302)
-//#define DHTTYPE           DHT21     // DHT 21 (AM2301)
-
 // See guide for details on sensor wiring and usage:
 //   https://learn.adafruit.com/dht/overview
-
-DHT_Unified dht(DHTPIN, DHTTYPE);
 
 const char* ssid = "belkin.636";
 const char* password = "3eb7e66b";
 const char * hostName = "esp-async";
 const char* http_username = "admin";
 const char* http_password = "admin";
-
 
 uint8_t master_mac[6];
 uint8_t slave_mac[6];
@@ -82,9 +69,7 @@ Ticker ticker;
 bool longpressed = false;
 #include "webserver.h"
 
-
 void setup(){
-
   pinMode(0, OUTPUT);
   Serial.begin(115200);
   Serial.setDebugOutput(true);
