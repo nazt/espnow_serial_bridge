@@ -75,9 +75,9 @@ client.on('message', function (topic, message) {
         statusObject.updated = moment().unix().toString()
         statusObject.updatedText = moment().format('MMMM Do YYYY, h:mm:ss a')
 
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/batt`, batt.toString())
-        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/status`, JSON.stringify(statusObject))
-        client.publish(`CMMC/espnow/${mac1String}/${name.toString()}/status`, JSON.stringify(statusObject))
+        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/batt`, batt.toString(), {retain: true})
+        client.publish(`CMMC/espnow/${mac1String}/${mac2String}/status`, JSON.stringify(statusObject), {retain: true})
+        client.publish(`CMMC/espnow/${mac1String}/${name.toString()}/status`, JSON.stringify(statusObject), {retain: true})
       } else {
         console.log('invalid header')
       }
