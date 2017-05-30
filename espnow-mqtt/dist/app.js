@@ -86,7 +86,7 @@ client.on('message', function (topic, message) {
 
         client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/batt', batt.toString());
         client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/status', JSON.stringify(statusObject));
-        client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/' + name.toString() + '/status', JSON.stringify(statusObject));
+        client.publish('CMMC/espnow/' + mac1String + '/' + name.toString() + '/status', JSON.stringify(statusObject));
       } else {
         console.log('invalid header');
       }
