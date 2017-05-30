@@ -135,7 +135,6 @@ void setup() {
 
     memcpy(buff+2, self_sta_master_macaddr, 6);
     memcpy(buff+6+2, client_slave_macaddr, 6);
-    // memcpy(buff+6+2+1, len, 1);
     Serial.printf("len = %d==%02x\r\n", len, len);
     buff[6+6+2] = len;
     memcpy(buff+6+2+6+1, data, len);
@@ -143,7 +142,6 @@ void setup() {
     byte sum2 = 0;
     for (size_t i = 1; i <= len+2+6+6; i++) {
       sum2 ^= buff[i-1];
-      // Serial.printf("idx: %d, buff = %02x, sum2 = %02x \r\n", i, buff[i-1], sum2);
     }
     buff[len+2+6+6] = sum2;
 
