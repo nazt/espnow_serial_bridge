@@ -92,36 +92,6 @@ void setup(){
   SPIFFS.begin();
   WiFi.disconnect();
   delay(100);
-  // Initialize device.
-  dht.begin();
-  {
-    // Print temperature sensor details.
-    sensor_t sensor;
-    dht.temperature().getSensor(&sensor);
-    Serial.println("------------------------------------");
-    Serial.println("Temperature");
-    Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-    Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-    Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-    Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" *C");
-    Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" *C");
-    Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" *C");
-    Serial.println("------------------------------------");
-    // Print humidity sensor details.
-    dht.humidity().getSensor(&sensor);
-    Serial.println("------------------------------------");
-    Serial.println("Humidity");
-    Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-    Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-    Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-    Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println("%");
-    Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println("%");
-    // Set delay between sensor readings based on sensor details.
-    delayMS = sensor.min_delay / 1000;
-    Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println("%");
-    Serial.print  ("minDelay:   "); Serial.print(sensor.min_delay); Serial.println("ms");
-    Serial.println("------------------------------------");
-  }
 
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(13, INPUT_PULLUP);
@@ -151,7 +121,7 @@ void setup(){
   }
   else {
     Serial.println("====================");
-    Serial.println("    MODE = ESPNOW   ");
+    Serial.println("   MODE = ESPNOW    ");
     Serial.println("====================");
     WiFi.disconnect();
     Serial.println("Initializing ESPNOW...");
@@ -164,9 +134,6 @@ void setup(){
     printMacAddress(macaddr);
 
     wifi_get_macaddr(SOFTAP_IF, macaddr);
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
     CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
     printMacAddress(macaddr);
     memcpy(slave_mac, macaddr, 6);
@@ -231,33 +198,11 @@ void loop(){
   }
   else {
     uint32_t temperature_uint32  = 0;
-    // Delay between measurements.
-    delay(delayMS);
-    // Get temperature event and print its value.
-    sensors_event_t event;
-    dht.temperature().getEvent(&event);
-    if (isnan(event.temperature)) {
-      Serial.println("Error reading temperature!");
-    }
-    else {
-      Serial.print("Temperature: ");
-      Serial.print(event.temperature);
-      Serial.println(" *C");
-    }
-    temperature_uint32 = (uint32_t)(event.temperature*100);
-    // Get humidity event and print its value.
-    dht.humidity().getEvent(&event);
-    if (isnan(event.relative_humidity)) {
-      Serial.println("Error reading humidity!");
-    }
-    else {
-      Serial.print("Humidity: ");
-      Serial.print(event.relative_humidity);
-      Serial.println("%");
-    }
-    uint32_t humidity_uint32 = (uint32_t)(event.relative_humidity*100);
+    uint32_t humidity_uint32 = 0;
+  	uint32_t cmdistance = ultrasonic.distanceRead();
+    pinMode(A0, INPUT);
+    uint32_t battery = (analogRead(A0) * 5000) / 880;
 
-    Serial.println("BUTTON PRESSED.");
     digitalWrite(LED_BUILTIN, LOW);
     message[0] = 0xff;
     message[1] = 0xfa;
@@ -266,7 +211,7 @@ void loop(){
     message[3] = 0x01;
     message[4] = 0x03;
 
-    // UUID
+    // NICK NAME
     message[5]  = 'd';
     message[6]  = 'h';
     message[7]  = 't';
@@ -274,18 +219,11 @@ void loop(){
     message[9]  = '0';
     message[10] = '1';
 
-
-
-  	uint32_t cmdistance = ultrasonic.distanceRead();//this result unit is centimeter
-
-
-    pinMode(A0, INPUT);
-    uint32_t battery = (analogRead(A0) * 5000) / 880;
-
     memcpy(message+11, (const void*)&temperature_uint32, 4);
     memcpy(message+15, (const void*)&humidity_uint32, 4);
     memcpy(message+19, (const void*)&cmdistance, 4);
     memcpy(message+23, (const void*)&battery, 4);
+
     byte sum = 0;
     for (size_t i = 0; i < sizeof(message)-1; i++) {
       sum ^= message[i];
@@ -302,6 +240,5 @@ void loop(){
     digitalWrite(LED_BUILTIN, HIGH);
 
     ESP.deepSleep(1000000*120); // 10 sec
-
   }
 }
