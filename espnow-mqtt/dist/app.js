@@ -75,10 +75,10 @@ client.on('message', function (topic, message) {
         statusObject.myName = name.toString();
         statusObject.type = type.toString('hex');
         statusObject.sensor = type.toString('hex');
-        statusObject.val1 = val1.toString();
-        statusObject.val2 = val2.toString();
-        statusObject.val3 = val3.toString();
-        statusObject.batt = batt.toString();
+        statusObject.val1 = parseInt(val1.toString());
+        statusObject.val2 = parseInt(val2.toString());
+        statusObject.val3 = parseInt(val3.toString());
+        statusObject.batt = parseInt(batt.toString());
         statusObject.mac1 = mac1String;
         statusObject.mac2 = mac2String;
         statusObject.updated = moment().unix().toString();
