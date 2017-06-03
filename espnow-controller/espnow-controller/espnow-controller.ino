@@ -13,15 +13,16 @@ SoftwareSerial swSerial(rxPin, txPin);
 
 #define WIFI_DEFAULT_CHANNEL 1
 #define DEBUG_SERIAL 1
-#if DEBUG_SERIAL
-#define DEBUG_PRINTER Serial
-#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
-#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
-#define DEBUG_PRINTF(...) { DEBUG_PRINTER.printf(__VA_ARGS__); }
+#define CMMC_DEBUG_SERIAL 1
+#if CMMC_DEBUG_SERIAL
+    #define CMMC_DEBUG_PRINTER Serial
+    #define CMMC_DEBUG_PRINT(...) { CMMC_DEBUG_PRINTER.print(__VA_ARGS__); }
+    #define CMMC_DEBUG_PRINTLN(...) { CMMC_DEBUG_PRINTER.println(__VA_ARGS__); }
+    #define CMMC_DEBUG_PRINTF(...) { CMMC_DEBUG_PRINTER.printf(__VA_ARGS__); }
 #else
-#define DEBUG_PRINT(...) { }
-#define DEBUG_PRINTLN(...) { }
-#define DEBUG_PRINTF(...) { }
+    #define CMMC_DEBUG_PRINT(...) { }
+    #define CMMC_DEBUG_PRINTLN(...) { }
+    #define CMMC_DEBUG_PRINTF(...) { }
 #endif
 
 bool ledState = LOW;
@@ -33,13 +34,13 @@ uint8_t buff[50];
 
 // SOFTAP_IF
 void printMacAddress(uint8_t* macaddr) {
-  DEBUG_PRINT("{");
+  CMMC_DEBUG_PRINT("{");
   for (int i = 0; i < 6; i++) {
-    DEBUG_PRINT("0x");
-    DEBUG_PRINT(macaddr[i], HEX);
-    if (i < 5) DEBUG_PRINT(',');
+    CMMC_DEBUG_PRINT("0x");
+    CMMC_DEBUG_PRINT(macaddr[i], HEX);
+    if (i < 5) CMMC_DEBUG_PRINT(',');
   }
-  DEBUG_PRINTLN("};");
+  CMMC_DEBUG_PRINTLN("};");
 }
 
 void setup() {
@@ -53,24 +54,24 @@ void setup() {
   pinMode(txPin, OUTPUT);
   swSerial.begin(9600);
 
-  DEBUG_PRINTLN("Initializing... Controller..");
+  CMMC_DEBUG_PRINTLN("Initializing... Controller..");
   WiFi.mode(WIFI_STA);
   uint8_t macaddr[6];
 
   wifi_get_macaddr(STATION_IF, macaddr);
-  DEBUG_PRINT("[master] address (STATION_IF): ");
+  CMMC_DEBUG_PRINT("[master] address (STATION_IF): ");
   memcpy(self_sta_master_macaddr, macaddr, 6);
   printMacAddress(macaddr);
 
   wifi_get_macaddr(SOFTAP_IF, macaddr);
-  DEBUG_PRINT("[slave] address (SOFTAP_IF): ");
+  CMMC_DEBUG_PRINT("[slave] address (SOFTAP_IF): ");
   printMacAddress(macaddr);
   memcpy(self_ap_slave_macaddr, macaddr, 6);
 
   if (esp_now_init() == 0) {
-    DEBUG_PRINTLN("direct link  init ok");
+    CMMC_DEBUG_PRINTLN("direct link  init ok");
   } else {
-    DEBUG_PRINTLN("dl init failed");
+    CMMC_DEBUG_PRINTLN("dl init failed");
     ESP.restart();
     return;
   }
@@ -162,16 +163,16 @@ void setup() {
   });
 
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
-    // DEBUG_PRINT("send_cb to ");
+    // CMMC_DEBUG_PRINT("send_cb to ");
     printMacAddress(macaddr);
     static uint32_t ok = 0;
     static uint32_t fail = 0;
     if (status == 0) {
-      DEBUG_PRINTLN("ESPNOW: SEND_OK");
+      CMMC_DEBUG_PRINTLN("ESPNOW: SEND_OK");
       ok++;
     }
     else {
-      DEBUG_PRINTLN("ESPNOW: SEND_FAILED");
+      CMMC_DEBUG_PRINTLN("ESPNOW: SEND_FAILED");
       fail++;
     }
     Serial.printf("[SUCCESS] = %lu/%lu \r\n", ok, ok + fail);
