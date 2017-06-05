@@ -32,8 +32,11 @@ extern "C" {
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
-
 #include <Ultrasonic.h>
+
+
+ADC_MODE(ADC_VCC);
+
 
 int trigpin = 4;//appoint trigger pin
 int echopin = 5;//appoint echo pin
@@ -49,9 +52,7 @@ Ultrasonic ultrasonic(trigpin,echopin);
 #define DHTPIN            12
 uint32_t delayMS;
 // Uncomment the type of sensor in use:
-//#define DHTTYPE         DHT11     // DHT 11
 #define DHTTYPE           DHT22     // DHT 22 (AM2302)
-//#define DHTTYPE           DHT21     // DHT 21 (AM2301)
 
 // See guide for details on sensor wiring and usage:
 //   https://learn.adafruit.com/dht/overview
@@ -82,12 +83,20 @@ Ticker ticker;
 bool longpressed = false;
 #include "webserver.h"
 
+bool espnowRetryFlag = false;
+uint8_t espnowRetries = 1;
+#define MAX_ESPNOW_RETRIES 30
+#define DEEP_SLEEP_S 10
+#define ESPNOW_RETRY_DELAY 30
 
-void setup(){
-
+void setup() {
   pinMode(0, OUTPUT);
   Serial.begin(115200);
   Serial.setDebugOutput(true);
+  float battVoltage = 0.00f;
+  battVoltage  = ESP.getVcc();
+  Serial.print(battVoltage /1024.00f);
+  Serial.println(" V");
   initBattery();
   SPIFFS.begin();
   WiFi.disconnect();
@@ -135,7 +144,7 @@ void setup(){
   if (longpressed) {
     runMode = MODE_WEBSERVER;
     Serial.println("====================");
-    Serial.println("    MODE = CONFIG   ");
+    Serial.println("   MODE = CONFIG    ");
     Serial.println("====================");
     WiFi.hostname(hostName);
     WiFi.mode(WIFI_AP_STA);
@@ -164,9 +173,6 @@ void setup(){
     printMacAddress(macaddr);
 
     wifi_get_macaddr(SOFTAP_IF, macaddr);
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
     CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
     printMacAddress(macaddr);
     memcpy(slave_mac, macaddr, 6);
@@ -202,12 +208,14 @@ void setup(){
       CMMC_DEBUG_PRINT("send to mac addr: ");
       printMacAddress(macaddr);
       if (status == 0) {
+        espnowRetryFlag = false;
         send_ok_counter++;
         counter++;
         CMMC_DEBUG_PRINTF("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter, send_ok_counter + send_fail_counter);
         digitalWrite(LED_BUILTIN, HIGH);
       }
       else {
+        espnowRetryFlag = true;
         send_fail_counter++;
         CMMC_DEBUG_PRINTF("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter, send_ok_counter + send_fail_counter);
       }
@@ -222,6 +230,11 @@ void setup(){
 
 #define MESSAGE_SIZE 30
 uint8_t message[MESSAGE_SIZE] = {0};
+
+void goSleep() {
+    Serial.printf("Go sleep for .. %lu seconds. \r\n", DEEP_SLEEP_S);
+    ESP.deepSleep(1000000*DEEP_SLEEP_S);
+}
 
 void loop(){
   bzero(message, sizeof(message));
@@ -267,17 +280,14 @@ void loop(){
     message[4] = 0x03;
 
     // UUID
-    message[5]  = 'd';
-    message[6]  = 'h';
+    message[5]  = 'n';
+    message[6]  = 'a';
     message[7]  = 't';
     message[8]  = '0';
     message[9]  = '0';
     message[10] = '1';
 
-
-
   	uint32_t cmdistance = ultrasonic.distanceRead();//this result unit is centimeter
-
 
     pinMode(A0, INPUT);
     uint32_t battery = (analogRead(A0) * 5000) / 880;
@@ -286,6 +296,7 @@ void loop(){
     memcpy(message+15, (const void*)&humidity_uint32, 4);
     memcpy(message+19, (const void*)&cmdistance, 4);
     memcpy(message+23, (const void*)&battery, 4);
+
     byte sum = 0;
     for (size_t i = 0; i < sizeof(message)-1; i++) {
       sum ^= message[i];
@@ -297,11 +308,24 @@ void loop(){
     Serial.printf("distance:  %d \r\n", cmdistance);
     Serial.printf("batt: %d \r\n", battery);
 
-    // uint8_t master_mac2[] = {0x18,0xFE,0x34,0xEE,0xA0,0xF9};
+    // transmit
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     esp_now_send(master_mac, message, sizeof(message));
-    digitalWrite(LED_BUILTIN, HIGH);
+    delay(ESPNOW_RETRY_DELAY);
 
-    ESP.deepSleep(1000000*120); // 10 sec
+    // retransmitt when failed
+    while(espnowRetryFlag) {
+      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+      esp_now_send(master_mac, message, sizeof(message));
+      espnowRetries = espnowRetries + 1;
 
+      // sleep after reach max retries.
+      if (espnowRetries > MAX_ESPNOW_RETRIES) {
+        goSleep();
+      }
+      delay(ESPNOW_RETRY_DELAY);
+    };
+
+    goSleep();
   }
 }

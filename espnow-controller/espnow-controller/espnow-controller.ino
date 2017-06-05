@@ -12,7 +12,6 @@ extern "C" {
 SoftwareSerial swSerial(rxPin, txPin);
 
 #define WIFI_DEFAULT_CHANNEL 1
-#define DEBUG_SERIAL 1
 #define CMMC_DEBUG_SERIAL 1
 #if CMMC_DEBUG_SERIAL
     #define CMMC_DEBUG_PRINTER Serial
@@ -44,11 +43,14 @@ void printMacAddress(uint8_t* macaddr) {
 }
 
 void setup() {
+  #if CMMC_DEBUG_SERIAL
+    Serial.begin(115200);
+    delay(10);
+    Serial.flush();
+  #endif
+
   WiFi.disconnect();
   pinMode(LED_BUILTIN, OUTPUT);
-#if DEBUG_SERIAL
-  Serial.begin(115200);
-#endif
 
   pinMode(rxPin, INPUT);
   pinMode(txPin, OUTPUT);
@@ -114,6 +116,7 @@ void setup() {
     uint32_t u32_temp;
     uint32_t u32_humid;
     uint32_t u32_batt;
+    
     u32_temp  = (data[14] << 24) | (data[13] << 16) | (data[12] << 8) | (data[11]);
     u32_humid = (data[18] << 24) | (data[17] << 16) | (data[16] << 8) | (data[15]);
     u32_batt  = (data[22] << 24) | (data[21] << 16) | (data[20] << 8) | (data[19]);
@@ -160,6 +163,8 @@ void setup() {
     swSerial.write(buff, len+2+6+6+1);
     swSerial.write('\r');
     swSerial.write('\n');
+
+
   });
 
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {

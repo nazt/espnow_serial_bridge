@@ -197,13 +197,14 @@ void loop(){
     message[4] = 0x03;
 
     // NICK NAME
-    message[5]  = 'd';
-    message[6]  = 'h';
+    message[5]  = 'n';
+    message[6]  = 'a';
     message[7]  = 't';
     message[8]  = '0';
     message[9]  = '0';
     message[10] = '1';
 
+    temperature_uint32 = millis();
     memcpy(message+11, (const void*)&temperature_uint32, 4);
     memcpy(message+15, (const void*)&humidity_uint32, 4);
     memcpy(message+19, (const void*)&cmdistance, 4);
