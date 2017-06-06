@@ -49,10 +49,10 @@ int runMode = MODE_ESPNOW;
 
 Ultrasonic ultrasonic(trigpin,echopin);
 
-#define DHTPIN            12
+#define DHTPIN        12
 uint32_t delayMS;
 // Uncomment the type of sensor in use:
-#define DHTTYPE           DHT22     // DHT 22 (AM2302)
+#define DHTTYPE       DHT22     // DHT 22 (AM2302)
 
 // See guide for details on sensor wiring and usage:
 //   https://learn.adafruit.com/dht/overview
@@ -136,12 +136,25 @@ void initUserEspNow() {
 
 void initUserSensor() {
     // Initialize device.
+    Serial.println("Initializing dht.");
     dht.begin();
     // Print temperature sensor details.
+
     sensor_t sensor;
     dht.temperature().getSensor(&sensor);
     dht.humidity().getSensor(&sensor);
     delayMS = sensor.min_delay / 1000;
+    sensors_event_t event;
+    dht.temperature().getEvent(&event);
+
+    if (isnan(event.temperature)) {
+        Serial.println("Error reading temperature!");
+    } else {
+        Serial.print("Temperature: ");
+        Serial.print(event.temperature);
+        Serial.println(" *C");
+    }
+
 }
 
 void initGpio() {
@@ -205,7 +218,6 @@ void setup() {
     SPIFFS.begin();
     WiFi.disconnect();
     delay(100);
-
     initGpio();
     initUserSensor();
     initUserEspNow();
@@ -214,9 +226,9 @@ void setup() {
     // initBattery();
 }
 
-void goSleep() {
-    Serial.printf("Go sleep for .. %lu seconds. \r\n", DEEP_SLEEP_S);
-    ESP.deepSleep(1000000 * DEEP_SLEEP_S);
+void goSleep(uint32_t deepSleepS) {
+    Serial.printf("Go sleep for .. %lu seconds. \r\n", deepSleepS);
+    ESP.deepSleep(1000000 * deepSleepS);
 }
 
 void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
@@ -233,7 +245,7 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
         delay(ESPNOW_RETRY_DELAY);
         // sleep after reach max retries.
         if (espnowRetries > MAX_ESPNOW_RETRIES) {
-            goSleep();
+            goSleep(DEEP_SLEEP_S);
         }
     };
 }
@@ -267,7 +279,6 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
 
     *humid = (uint32_t)(event.relative_humidity * 100);
 }
-
 void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t field3) {
     uint32_t battery = ESP.getVcc();
     message[0] = 0xff;
@@ -310,9 +321,9 @@ void loop() {
       message[7] = 't';
       message[8] = '0';
       message[9] = '0';
-      message[10] = '2';
+      message[10] = '3';
       addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
       sendDataToMaster(message, sizeof(message));
-      goSleep();
+      goSleep(DEEP_SLEEP_S);
     }
 }
