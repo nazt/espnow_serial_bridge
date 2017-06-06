@@ -224,21 +224,22 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     esp_now_send(master_mac, message_ptr, msg_size);
     delay(ESPNOW_RETRY_DELAY);
+
     // retransmitt when failed
     while (espnowRetryFlag) {
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         esp_now_send(master_mac, message_ptr, msg_size);
         espnowRetries = espnowRetries + 1;
-
+        delay(ESPNOW_RETRY_DELAY);
         // sleep after reach max retries.
         if (espnowRetries > MAX_ESPNOW_RETRIES) {
             goSleep();
         }
-        delay(ESPNOW_RETRY_DELAY);
     };
 }
 
 bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
+    digitalWrite(LED_BUILTIN, LOW);
     // Delay between measurements.
     delay(delayMS);
     // Get temperature event and print its value.
@@ -267,53 +268,51 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
     *humid = (uint32_t)(event.relative_humidity * 100);
 }
 
+void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t field3) {
+    uint32_t battery = ESP.getVcc();
+    message[0] = 0xff;
+    message[1] = 0xfa;
+
+    message[2] = 0x01;
+    message[3] = 0x01;
+    message[4] = 0x03;
+
+    memcpy(message + 11, (const void * )&field1, 4);
+    memcpy(message + 15, (const void * )&field2, 4);
+    memcpy(message + 19, (const void * )&field3, 4);
+    memcpy(message + 23, (const void * )&battery, 4);
+
+    byte sum = 0;
+    for (size_t i = 0; i < sizeof(message) - 1; i++) {
+        sum ^= message[i];
+    }
+    message[MESSAGE_SIZE - 1] = sum;
+    Serial.printf("temp: %02x - %lu\r\n", field1, field1);
+    Serial.printf("humid: %02x - %lu\r\n", field2, field2);
+    Serial.printf("distance:  %d \r\n", field3);
+    Serial.printf("batt: %d \r\n", battery);
+}
+
 void loop() {
     bzero(message, sizeof(message));
     ArduinoOTA.handle();
     if (runMode == MODE_WEBSERVER) {
-        return;
+      return;
     } else {
-        uint32_t temperature_uint32 = 0;
-        uint32_t humidity_uint32 = 0;
-
-        readDHTSensor(&temperature_uint32, &humidity_uint32);
-        digitalWrite(LED_BUILTIN, LOW);
-
-        message[0] = 0xff;
-        message[1] = 0xfa;
-
-        message[2] = 0x01;
-        message[3] = 0x01;
-        message[4] = 0x03;
-
-        // UUID
-        message[5] = 'n';
-        message[6] = 'a';
-        message[7] = 't';
-        message[8] = '0';
-        message[9] = '0';
-        message[10] = '2';
-
-        uint32_t cmdistance = ultrasonic.distanceRead(); //this result unit is centimeter
-        uint32_t battery = ESP.getVcc();
-        
-        memcpy(message + 11, (const void * )&temperature_uint32, 4);
-        memcpy(message + 15, (const void * )&humidity_uint32, 4);
-        memcpy(message + 19, (const void * )&cmdistance, 4);
-        memcpy(message + 23, (const void * )&battery, 4);
-
-        byte sum = 0;
-        for (size_t i = 0; i < sizeof(message) - 1; i++) {
-            sum ^= message[i];
-        }
-        message[MESSAGE_SIZE - 1] = sum;
-
-        Serial.printf("temp: %02x - %lu\r\n", temperature_uint32, temperature_uint32);
-        Serial.printf("humid: %02x - %lu\r\n", humidity_uint32, humidity_uint32);
-        Serial.printf("distance:  %d \r\n", cmdistance);
-        Serial.printf("batt: %d \r\n", battery);
-
-        sendDataToMaster(message, sizeof(message));
-        goSleep();
+      uint32_t temperature_uint32 = 0;
+      uint32_t humidity_uint32 = 0;
+       //this result unit is centimeter
+      uint32_t cmdistance = ultrasonic.distanceRead();
+      readDHTSensor(&temperature_uint32, &humidity_uint32);
+      // UUID
+      message[5] = 'n';
+      message[6] = 'a';
+      message[7] = 't';
+      message[8] = '0';
+      message[9] = '0';
+      message[10] = '2';
+      addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
+      sendDataToMaster(message, sizeof(message));
+      goSleep();
     }
 }
