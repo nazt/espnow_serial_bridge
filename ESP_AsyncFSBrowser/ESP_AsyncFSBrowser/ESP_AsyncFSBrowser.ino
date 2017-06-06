@@ -75,7 +75,7 @@ bool espnowRetryFlag = false;
 uint8_t espnowRetries = 1;
 
 #define MAX_ESPNOW_RETRIES 30
-#define DEEP_SLEEP_S 5
+#define DEEP_SLEEP_S 2
 #define ESPNOW_RETRY_DELAY 30
 void initUserEspNow() {
     if (esp_now_init() == 0) {
@@ -127,7 +127,6 @@ void initUserSensor() {
     // Initialize device.
     Serial.println("Initializing dht.");
     dht.begin();
-
     float h = dht.readHumidity();
     // Read temperature as Celsius (the default)
     float t = dht.readTemperature();
@@ -239,7 +238,8 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
 }
 
 bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
-
+  *temp = (uint32_t) dht.readTemperature()*100;
+  *humid = (uint32_t) dht.readHumidity()*100;
 }
 
 void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t field3) {
@@ -261,9 +261,9 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
         sum ^= message[i];
     }
     message[MESSAGE_SIZE - 1] = sum;
-    Serial.printf("temp: %02x - %lu\r\n", field1, field1);
-    Serial.printf("humid: %02x - %lu\r\n", field2, field2);
-    Serial.printf("distance:  %d \r\n", field3);
+    Serial.printf("field1: %02x - %lu\r\n", field1, field1);
+    Serial.printf("field2: %02x - %lu\r\n", field2, field2);
+    Serial.printf("field3:  %d \r\n", field3);
     Serial.printf("batt: %d \r\n", battery);
 }
 
@@ -278,6 +278,7 @@ void loop() {
        //this result unit is centimeter
       uint32_t cmdistance = 0;
       readDHTSensor(&temperature_uint32, &humidity_uint32);
+
       // UUID
       message[5]  = 'n';
       message[6]  = 'a';
@@ -285,7 +286,7 @@ void loop() {
       message[8]  = '0';
       message[9]  = '0';
       message[10] = '3';
-      addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
+      addDataField(message, temperature_uint32, humidity_uint32, send_fail_counter);
       sendDataToMaster(message, sizeof(message));
       goSleep(DEEP_SLEEP_S);
     }
