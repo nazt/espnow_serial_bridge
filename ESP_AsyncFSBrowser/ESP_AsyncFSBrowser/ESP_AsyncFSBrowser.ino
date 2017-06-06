@@ -29,35 +29,24 @@ extern "C" {
   #include <espnow.h>
   #include <user_interface.h>
 }
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
-#include <DHT_U.h>
+
+#include "DHT.h"
 #include <Ultrasonic.h>
 
 ADC_MODE(ADC_VCC);
-
-int trigpin = 4;//appoint trigger pin
-int echopin = 5;//appoint echo pin
 
 #define MESSAGE_SIZE 30
 uint8_t message[MESSAGE_SIZE] = {0};
 
 #define MODE_WEBSERVER 1
-#define MODE_ESPNOW 2
+#define MODE_ESPNOW    2
 
 int runMode = MODE_ESPNOW;
 
-Ultrasonic ultrasonic(trigpin,echopin);
-
+#define DHTTYPE       DHT22   // DHT 22  (AM2302), AM2321
 #define DHTPIN        12
-uint32_t delayMS;
-// Uncomment the type of sensor in use:
-#define DHTTYPE       DHT22     // DHT 22 (AM2302)
-
-// See guide for details on sensor wiring and usage:
-//   https://learn.adafruit.com/dht/overview
-
-DHT_Unified dht(DHTPIN, DHTTYPE);
+uint32_t delayMS = 100;
+DHT dht(12, DHTTYPE);
 
 const char* ssid = "belkin.636";
 const char* password = "3eb7e66b";
@@ -138,23 +127,22 @@ void initUserSensor() {
     // Initialize device.
     Serial.println("Initializing dht.");
     dht.begin();
-    // Print temperature sensor details.
 
-    sensor_t sensor;
-    dht.temperature().getSensor(&sensor);
-    dht.humidity().getSensor(&sensor);
-    delayMS = sensor.min_delay / 1000;
-    sensors_event_t event;
-    dht.temperature().getEvent(&event);
-
-    if (isnan(event.temperature)) {
-        Serial.println("Error reading temperature!");
-    } else {
-        Serial.print("Temperature: ");
-        Serial.print(event.temperature);
-        Serial.println(" *C");
+    float h = dht.readHumidity();
+    // Read temperature as Celsius (the default)
+    float t = dht.readTemperature();
+    // Check if any reads failed and exit early (to try again).
+    if (isnan(h) || isnan(t)) {
+      Serial.println("Failed to read from DHT sensor!");
+      return;
     }
 
+    Serial.print("Humidity: ");
+    Serial.print(h);
+    Serial.print(" %\t");
+    Serial.print("Temperature: ");
+    Serial.print(t);
+    Serial.print(" *C ");
 }
 
 void initGpio() {
@@ -251,34 +239,9 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
 }
 
 bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
-    digitalWrite(LED_BUILTIN, LOW);
-    // Delay between measurements.
-    delay(delayMS);
-    // Get temperature event and print its value.
-    sensors_event_t event;
-    dht.temperature().getEvent(&event);
 
-    if (isnan(event.temperature)) {
-        Serial.println("Error reading temperature!");
-    } else {
-        Serial.print("Temperature: ");
-        Serial.print(event.temperature);
-        Serial.println(" *C");
-    }
-    *temp = (uint32_t)(event.temperature * 100);
-
-    // Get humidity event and print its value.
-    dht.humidity().getEvent(&event);
-    if (isnan(event.relative_humidity)) {
-        Serial.println("Error reading humidity!");
-    } else {
-        Serial.print("Humidity: ");
-        Serial.print(event.relative_humidity);
-        Serial.println("%");
-    }
-
-    *humid = (uint32_t)(event.relative_humidity * 100);
 }
+
 void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t field3) {
     uint32_t battery = ESP.getVcc();
     message[0] = 0xff;
@@ -310,17 +273,17 @@ void loop() {
     if (runMode == MODE_WEBSERVER) {
       return;
     } else {
-      uint32_t temperature_uint32 = 0;
-      uint32_t humidity_uint32 = 0;
+      uint32_t temperature_uint32 = (uint32_t) dht.readTemperature()*100;
+      uint32_t humidity_uint32 = (uint32_t) dht.readHumidity()*100;
        //this result unit is centimeter
-      uint32_t cmdistance = ultrasonic.distanceRead();
+      uint32_t cmdistance = 0;
       readDHTSensor(&temperature_uint32, &humidity_uint32);
       // UUID
-      message[5] = 'n';
-      message[6] = 'a';
-      message[7] = 't';
-      message[8] = '0';
-      message[9] = '0';
+      message[5]  = 'n';
+      message[6]  = 'a';
+      message[7]  = 't';
+      message[8]  = '0';
+      message[9]  = '0';
       message[10] = '3';
       addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
       sendDataToMaster(message, sizeof(message));
