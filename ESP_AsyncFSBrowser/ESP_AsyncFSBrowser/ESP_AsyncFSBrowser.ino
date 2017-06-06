@@ -114,7 +114,7 @@ void initUserEspNow() {
             send_ok_counter++;
             counter++;
             CMMC_DEBUG_PRINTF("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter, send_ok_counter + send_fail_counter);
-            digitalWrite(LED_BUILTIN, HIGH);
+            // digitalWrite(LED_BUILTIN, HIGH);
         } else {
             espnowRetryFlag = true;
             send_fail_counter++;
@@ -226,7 +226,7 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
 
     // retransmitt when failed
     while (espnowRetryFlag) {
-        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+        // digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         esp_now_send(master_mac, message_ptr, msg_size);
         espnowRetries = espnowRetries + 1;
         delay(ESPNOW_RETRY_DELAY);
