@@ -139,8 +139,8 @@ void initUserSensor() {
     dht.begin();
     // Print temperature sensor details.
     sensor_t sensor;
-    dht.temperature().getSensor( & sensor);
-    dht.humidity().getSensor( & sensor);
+    dht.temperature().getSensor(&sensor);
+    dht.humidity().getSensor(&sensor);
     delayMS = sensor.min_delay / 1000;
 }
 
@@ -170,44 +170,48 @@ void printAndStoreEspNowMacInfo() {
     printMacAddress(macaddr);
     memcpy(slave_mac, macaddr, 6);
 }
+void startModeConfig() {
+    Serial.println("====================");
+    Serial.println("   MODE = CONFIG    ");
+    Serial.println("====================");
+    WiFi.hostname(hostName);
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP(hostName);
+    WiFi.begin(ssid, password);
+    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+        Serial.printf("STA: Failed!\n");
+        WiFi.disconnect(false);
+        delay(1000);
+        WiFi.begin(ssid, password);
+    }
+}
 
-void setup() {
-    pinMode(0, OUTPUT);
-    Serial.begin(115200);
-    Serial.setDebugOutput(true);
-    // initBattery();
-    SPIFFS.begin();
-    WiFi.disconnect();
-    delay(100);
-    initGpio();
-    initUserSensor();
-
+void checkBootMode() {
     Serial.println("Wating configuration pin..");
-    _wait_config_signal(13, & longpressed);
+    _wait_config_signal(13,&longpressed);
     Serial.println("...Done");
     if (longpressed) {
         runMode = MODE_WEBSERVER;
-        Serial.println("====================");
-        Serial.println("   MODE = CONFIG    ");
-        Serial.println("====================");
-        WiFi.hostname(hostName);
-        WiFi.mode(WIFI_AP_STA);
-        WiFi.softAP(hostName);
-        WiFi.begin(ssid, password);
-        if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-            Serial.printf("STA: Failed!\n");
-            WiFi.disconnect(false);
-            delay(1000);
-            WiFi.begin(ssid, password);
-        }
+        startModeConfig();
         setupWebServer();
     } else {
         printAndStoreEspNowMacInfo();
     }
+}
 
+void setup() {
+    Serial.begin(115200);
+    Serial.setDebugOutput(true);
+    SPIFFS.begin();
+    WiFi.disconnect();
+    delay(100);
+
+    initGpio();
+    initUserSensor();
     initUserEspNow();
     setupOTA();
     loadConfig(master_mac);
+    // initBattery();
 }
 
 void goSleep() {
@@ -234,6 +238,35 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
     };
 }
 
+bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
+    // Delay between measurements.
+    delay(delayMS);
+    // Get temperature event and print its value.
+    sensors_event_t event;
+    dht.temperature().getEvent(&event);
+
+    if (isnan(event.temperature)) {
+        Serial.println("Error reading temperature!");
+    } else {
+        Serial.print("Temperature: ");
+        Serial.print(event.temperature);
+        Serial.println(" *C");
+    }
+    *temp = (uint32_t)(event.temperature * 100);
+
+    // Get humidity event and print its value.
+    dht.humidity().getEvent(&event);
+    if (isnan(event.relative_humidity)) {
+        Serial.println("Error reading humidity!");
+    } else {
+        Serial.print("Humidity: ");
+        Serial.print(event.relative_humidity);
+        Serial.println("%");
+    }
+
+    *humid = (uint32_t)(event.relative_humidity * 100);
+}
+
 void loop() {
     bzero(message, sizeof(message));
     ArduinoOTA.handle();
@@ -241,32 +274,11 @@ void loop() {
         return;
     } else {
         uint32_t temperature_uint32 = 0;
-        // Delay between measurements.
-        delay(delayMS);
-        // Get temperature event and print its value.
-        sensors_event_t event;
-        dht.temperature().getEvent( & event);
-        if (isnan(event.temperature)) {
-            Serial.println("Error reading temperature!");
-        } else {
-            Serial.print("Temperature: ");
-            Serial.print(event.temperature);
-            Serial.println(" *C");
-        }
-        temperature_uint32 = (uint32_t)(event.temperature * 100);
-        // Get humidity event and print its value.
-        dht.humidity().getEvent( & event);
-        if (isnan(event.relative_humidity)) {
-            Serial.println("Error reading humidity!");
-        } else {
-            Serial.print("Humidity: ");
-            Serial.print(event.relative_humidity);
-            Serial.println("%");
-        }
-        uint32_t humidity_uint32 = (uint32_t)(event.relative_humidity * 100);
+        uint32_t humidity_uint32 = 0;
 
-        Serial.println("BUTTON PRESSED.");
+        readDHTSensor(&temperature_uint32, &humidity_uint32);
         digitalWrite(LED_BUILTIN, LOW);
+
         message[0] = 0xff;
         message[1] = 0xfa;
 
@@ -283,14 +295,12 @@ void loop() {
         message[10] = '2';
 
         uint32_t cmdistance = ultrasonic.distanceRead(); //this result unit is centimeter
-
-        // pinMode(A0, INPUT);
         uint32_t battery = ESP.getVcc();
-
-        memcpy(message + 11, (const void * ) & temperature_uint32, 4);
-        memcpy(message + 15, (const void * ) & humidity_uint32, 4);
-        memcpy(message + 19, (const void * ) & cmdistance, 4);
-        memcpy(message + 23, (const void * ) & battery, 4);
+        
+        memcpy(message + 11, (const void * )&temperature_uint32, 4);
+        memcpy(message + 15, (const void * )&humidity_uint32, 4);
+        memcpy(message + 19, (const void * )&cmdistance, 4);
+        memcpy(message + 23, (const void * )&battery, 4);
 
         byte sum = 0;
         for (size_t i = 0; i < sizeof(message) - 1; i++) {
