@@ -34,9 +34,7 @@ extern "C" {
 #include <DHT_U.h>
 #include <Ultrasonic.h>
 
-
 ADC_MODE(ADC_VCC);
-
 
 int trigpin = 4;//appoint trigger pin
 int echopin = 5;//appoint echo pin
@@ -86,18 +84,14 @@ bool longpressed = false;
 bool espnowRetryFlag = false;
 uint8_t espnowRetries = 1;
 #define MAX_ESPNOW_RETRIES 30
-#define DEEP_SLEEP_S 10
+#define DEEP_SLEEP_S 5
 #define ESPNOW_RETRY_DELAY 30
 
 void setup() {
   pinMode(0, OUTPUT);
   Serial.begin(115200);
   Serial.setDebugOutput(true);
-  float battVoltage = 0.00f;
-  battVoltage  = ESP.getVcc();
-  Serial.print(battVoltage /1024.00f);
-  Serial.println(" V");
-  initBattery();
+    // initBattery();
   SPIFFS.begin();
   WiFi.disconnect();
   delay(100);
@@ -107,29 +101,8 @@ void setup() {
     // Print temperature sensor details.
     sensor_t sensor;
     dht.temperature().getSensor(&sensor);
-    Serial.println("------------------------------------");
-    Serial.println("Temperature");
-    Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-    Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-    Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-    Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" *C");
-    Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" *C");
-    Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" *C");
-    Serial.println("------------------------------------");
-    // Print humidity sensor details.
     dht.humidity().getSensor(&sensor);
-    Serial.println("------------------------------------");
-    Serial.println("Humidity");
-    Serial.print  ("Sensor:       "); Serial.println(sensor.name);
-    Serial.print  ("Driver Ver:   "); Serial.println(sensor.version);
-    Serial.print  ("Unique ID:    "); Serial.println(sensor.sensor_id);
-    Serial.print  ("Max Value:    "); Serial.print(sensor.max_value); Serial.println("%");
-    Serial.print  ("Min Value:    "); Serial.print(sensor.min_value); Serial.println("%");
-    // Set delay between sensor readings based on sensor details.
     delayMS = sensor.min_delay / 1000;
-    Serial.print  ("Resolution:   "); Serial.print(sensor.resolution); Serial.println("%");
-    Serial.print  ("minDelay:   "); Serial.print(sensor.min_delay); Serial.println("ms");
-    Serial.println("------------------------------------");
   }
 
   pinMode(LED_BUILTIN, OUTPUT);
@@ -285,17 +258,18 @@ void loop(){
     message[7]  = 't';
     message[8]  = '0';
     message[9]  = '0';
-    message[10] = '1';
+    message[10] = '2';
 
   	uint32_t cmdistance = ultrasonic.distanceRead();//this result unit is centimeter
 
-    pinMode(A0, INPUT);
-    uint32_t battery = (analogRead(A0) * 5000) / 880;
+    // pinMode(A0, INPUT);
+    uint32_t battery = ESP.getVcc();
 
     memcpy(message+11, (const void*)&temperature_uint32, 4);
     memcpy(message+15, (const void*)&humidity_uint32, 4);
     memcpy(message+19, (const void*)&cmdistance, 4);
     memcpy(message+23, (const void*)&battery, 4);
+
 
     byte sum = 0;
     for (size_t i = 0; i < sizeof(message)-1; i++) {
@@ -312,7 +286,6 @@ void loop(){
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     esp_now_send(master_mac, message, sizeof(message));
     delay(ESPNOW_RETRY_DELAY);
-
     // retransmitt when failed
     while(espnowRetryFlag) {
       digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
