@@ -78,8 +78,15 @@ void setup() {
     return;
   }
 
-  swSerial.println("ESPNOW SEND HELLO");
-  swSerial.write("HELLO", 5);
+
+  Serial.println("MASTER: ");
+  printMacAddress(self_sta_master_macaddr);
+
+  swSerial.write(0xFC);
+  swSerial.write(0xFA);
+  swSerial.write(self_ap_slave_macaddr, 6);
+  swSerial.write('\r');
+  swSerial.write('\n');
 
   bzero(buff, sizeof(buff));
 
@@ -116,7 +123,7 @@ void setup() {
     uint32_t u32_temp;
     uint32_t u32_humid;
     uint32_t u32_batt;
-    
+
     u32_temp  = (data[14] << 24) | (data[13] << 16) | (data[12] << 8) | (data[11]);
     u32_humid = (data[18] << 24) | (data[17] << 16) | (data[16] << 8) | (data[15]);
     u32_batt  = (data[22] << 24) | (data[21] << 16) | (data[20] << 8) | (data[19]);
@@ -160,10 +167,10 @@ void setup() {
 
     Serial.println();
     Serial.printf("free heap = %lu \r\n", ESP.getFreeHeap());
+
     swSerial.write(buff, len+2+6+6+1);
     swSerial.write('\r');
     swSerial.write('\n');
-
 
   });
 
@@ -187,4 +194,7 @@ void setup() {
 
 void loop() {
   yield();
+  while(swSerial.available()) {
+    // Serial.write(swSerial.read());
+  }
 }

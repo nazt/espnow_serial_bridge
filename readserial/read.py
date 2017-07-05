@@ -55,6 +55,7 @@ def str2hexstr(line):
 
 while True:
     try:
+        print "try readline"
         line = readline(ser)
         line_str = bytes(line)
         line_hex = str2hexstr(line_str)

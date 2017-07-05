@@ -43,11 +43,11 @@ client.on('message', function (topic, message) {
       //   console.log('YAY!')
       // }
       if (payload[0] === 0xff && payload[1] === 0xfa) {
-        let type = payload.slice(2, 5)
-        let name = payload.slice(5, 11)
-        let mac1String = mac1.toString('hex')
-        let mac2String = mac2.toString('hex')
-        let [val1, val2, val3, batt] = [
+        const type = payload.slice(2, 5)
+        const name = payload.slice(5, 11)
+        const mac1String = mac1.toString('hex')
+        const mac2String = mac2.toString('hex')
+        const [val1, val2, val3, batt] = [
           payload.readUInt32LE(11) || 0,
           payload.readUInt32LE(15) || 0,
           payload.readUInt32LE(19) || 0,

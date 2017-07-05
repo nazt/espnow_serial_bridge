@@ -43,7 +43,7 @@ uint8_t message[MESSAGE_SIZE] = {0};
 
 int runMode = MODE_ESPNOW;
 
-#define DHTTYPE       DHT22   // DHT 22  (AM2302), AM2321
+#define DHTTYPE       DHT11   // DHT 22  (AM2302), AM2321
 #define DHTPIN        12
 uint32_t delayMS = 100;
 DHT dht(12, DHTTYPE);
@@ -75,7 +75,7 @@ bool espnowRetryFlag = false;
 uint8_t espnowRetries = 1;
 
 #define MAX_ESPNOW_RETRIES 30
-#define DEEP_SLEEP_S 2
+#define DEEP_SLEEP_S 300
 #define ESPNOW_RETRY_DELAY 30
 void initUserEspNow() {
     if (esp_now_init() == 0) {
@@ -280,12 +280,12 @@ void loop() {
       readDHTSensor(&temperature_uint32, &humidity_uint32);
 
       // UUID
-      message[5]  = 'n';
-      message[6]  = 'a';
-      message[7]  = 't';
-      message[8]  = '0';
+      message[5]  = 'd';
+      message[6]  = 'h';
+      message[7]  = '1';
+      message[8]  = 'x';
       message[9]  = '0';
-      message[10] = '3';
+      message[10] = '5';
       addDataField(message, temperature_uint32, humidity_uint32, send_fail_counter);
       sendDataToMaster(message, sizeof(message));
       goSleep(DEEP_SLEEP_S);
