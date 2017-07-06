@@ -54,7 +54,6 @@ client.on('message', function (topic, message) {
           payload.readUInt32LE(19) || 0,
           payload.readUInt32LE(23) || 0
         ]
-
         _.extend(statusObject, {
           myName: name.toString(),
           type: type.toString('hex'),

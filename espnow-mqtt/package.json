@@ -37,9 +37,6 @@
     ]
   },
   "jest": {
-    "projects": [
-      "<rootDir>/src"
-    ],
     "verbose": true,
     "testPathIgnorePatterns": [],
     "roots": [ "." ]

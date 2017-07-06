@@ -1,20 +1,18 @@
 /** * Created by nat on 7/5/2017 AD.
  */
 
-const chalk = require('chalk')
-
-export const checksum = (message) => {
+export let checksum = (message) => {
   let calculatedSum = 0
   let checkSum = message[message.length - 1]
   for (let i = 0; i < message.length - 1; i++) {
     calculatedSum ^= message[i]
   }
-  console.log(`calculated sum = ${chalk.yellow(hexChar(calculatedSum))}`)
-  console.log(`    >check sum = ${chalk.green(hexChar(checkSum))}`)
+  // console.log(`calculated sum = ${chalk.yellow(hexChar(calculatedSum))}`)
+  // console.log(`    >check sum = ${chalk.green(hexChar(checkSum))}`)
   return calculatedSum === checkSum
 }
 
-export const isValidInComingMessage = (message) => {
+export let isValidInComingMessage = (message) => {
   const msgLength = message.length
   const lastIdx = msgLength - 1
   const isValidHeaderBytes = (message[0] === 0xfc && message[1] === 0xfd)
@@ -22,12 +20,12 @@ export const isValidInComingMessage = (message) => {
   return isValidHeaderBytes && isValidEndBytes
 }
 
-export const getPayload = (message) => {
-  const output = message.slice(message, message.length - 2)
+export let getPayload = (message) => {
+  // console.log(`isValidInComingMessage = `, isValidInComingMessage)
   if (isValidInComingMessage(message)) {
-    return output
+    return message.slice(message, message.length - 2)
   } else {
-    return false
+    return null
   }
 }
 
