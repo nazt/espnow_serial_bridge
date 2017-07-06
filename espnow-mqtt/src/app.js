@@ -36,9 +36,6 @@ client.on('message', function (topic, message) {
   let statusObject = {}
   if (checksum(message)) {
     if (message[0] === 0xfc && message[1] === 0xfd) {
-      const len = message[2 + 6 + 6]
-      const mac1 = message.slice(2, 2 + 6)
-      const mac2 = message.slice(2 + 6, 2 + 6 + 6)
       const payload = message.slice(2 + 6 + 6 + 1, message.length - 1)
 
       if (payload[0] === 0xff && payload[1] === 0xfa) {
