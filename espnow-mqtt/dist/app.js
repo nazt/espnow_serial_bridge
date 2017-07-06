@@ -38,12 +38,10 @@ client.on('message', function (topic, message) {
   var statusObject = {};
   if ((0, _utils.checksum)(message)) {
     if (message[0] === 0xfc && message[1] === 0xfd) {
-      var mac1 = void 0,
-          mac2 = void 0;
       var len = message[2 + 6 + 6];
+      var mac1 = message.slice(2, 2 + 6);
+      var mac2 = message.slice(2 + 6, 2 + 6 + 6);
       var payload = message.slice(2 + 6 + 6 + 1, message.length - 1);
-      mac1 = message.slice(2, 2 + 6);
-      mac2 = message.slice(2 + 6, 2 + 6 + 6);
 
       if (payload[0] === 0xff && payload[1] === 0xfa) {
         var _payload = payload.slice(2).toString('hex');

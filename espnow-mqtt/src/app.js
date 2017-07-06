@@ -36,20 +36,19 @@ client.on('message', function (topic, message) {
   let statusObject = {}
   if (checksum(message)) {
     if (message[0] === 0xfc && message[1] === 0xfd) {
-      let mac1, mac2
-      let len = message[2 + 6 + 6]
-      let payload = message.slice(2 + 6 + 6 + 1, message.length - 1)
-      mac1 = message.slice(2, 2 + 6)
-      mac2 = message.slice(2 + 6, 2 + 6 + 6)
+      const len = message[2 + 6 + 6]
+      const mac1 = message.slice(2, 2 + 6)
+      const mac2 = message.slice(2 + 6, 2 + 6 + 6)
+      const payload = message.slice(2 + 6 + 6 + 1, message.length - 1)
 
       if (payload[0] === 0xff && payload[1] === 0xfa) {
         let _payload = payload.slice(2).toString('hex')
         console.log(`len = ${chalk.cyan(len)}, payload = ${chalk.yellow(`fffa`)}${chalk.cyan(_payload)}`)
-        let type = payload.slice(2, 5)
-        let name = payload.slice(5, 11)
-        let mac1String = mac1.toString('hex')
-        let mac2String = mac2.toString('hex')
-        let [val1, val2, val3, batt] = [
+        const type = payload.slice(2, 5)
+        const name = payload.slice(5, 11)
+        const mac1String = mac1.toString('hex')
+        const mac2String = mac2.toString('hex')
+        const [val1, val2, val3, batt] = [
           payload.readUInt32LE(11) || 0,
           payload.readUInt32LE(15) || 0,
           payload.readUInt32LE(19) || 0,
