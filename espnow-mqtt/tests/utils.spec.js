@@ -9,6 +9,15 @@ describe('src/utils.js', () => {
 
   let dataBytes
   let type, field1, field2, field3, battery, nameLen, name
+  const [startBytes, mac1, mac2, endBytes] = [
+    [0xfc, 0xfd], /* start byte */
+    [0x18, 0xfe, 0x34, 0xdb, 0x43, 0x10], /* mac1 */
+    [0x18, 0xfe, 0x34, 0xda, 0xf4, 0x98], /* mac2 */
+    [0x0d, 0x0a] /* end byte */
+  ]
+
+  console.log(`startBytes: `, startBytes)
+  console.log(`endBytes: `, endBytes)
 
   let hexFromChar = (c) => c.charCodeAt(0)
   beforeEach(() => {
@@ -23,23 +32,13 @@ describe('src/utils.js', () => {
     ]
 
     dataBytes = [...type, ...field1, ...field2, ...field3, ...battery, ...nameLen, ...name]
-    dataBytes = [...dataBytes, Utils.calculateChecksum(Buffer.from(dataBytes))]
+    dataBytes = [...[0xff, 0xfa], ...dataBytes, Utils.calculateChecksum(Buffer.from(dataBytes))]
 
-    // console.log(`dataByte = `, Buffer.from(dataBytes), `dataBytes.length = ${dataBytes.length}`)
+    let packetPayload = [...mac1, ...mac2, dataBytes.length + 1, ...dataBytes]
+    let packetPayloadCRC = Utils.calculateChecksum(Buffer.from(packetPayload))
+    packetPayload = [...[0xfc, 0xfd], ...packetPayload, packetPayloadCRC, ...[0x0d, 0x0a]]
 
-    const [startBytes, mac1, mac2, endBytes] = [
-      [0xfc, 0xfd], /* start byte */
-      [0x18, 0xfe, 0x34, 0xdb, 0x43, 0x10], /* mac1 */
-      [0x18, 0xfe, 0x34, 0xda, 0xf4, 0x98], /* mac2 */
-      [0x0d, 0x0a] /* end byte */
-    ]
-    // [0x6c], /* checksum */
-
-    let mergedByte = [...startBytes, ...mac1, ...mac2, dataBytes.length, ...dataBytes]
-    mergedByte = [...mergedByte, Utils.calculateChecksum(Buffer.from(mergedByte)), ...endBytes]
-
-    validBuffer = Buffer.from(mergedByte)
-    console.log(`validBuffer = `, validBuffer)
+    validBuffer = Buffer.from(packetPayload)
 
     bufferSize = validBuffer.length
     bufferLastIdx = bufferSize - 1
@@ -83,6 +82,7 @@ describe('src/utils.js', () => {
 
   describe('parsePayload', () => {
     it('should parse payload wrapper correctly', () => {
+      console.log(`validBuffer = `, validBuffer)
       const result = Utils.parsePayload(validBuffer)
 
       // expect(result).toMatchObject({
