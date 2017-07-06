@@ -8,7 +8,7 @@ describe('src/utils.js', () => {
       0x1d, 0x5, 0x0, 0x0, 0x0, 0x0, 0x6c, 0xd, 0xa]
     // console.log(checksum, expect)
     // console.log(`${b.toString('hex')}`)
-    expect(checksum(b))
+    expect(checksum(b)).toBeFalsy()
     // let result = sum(1, 4)
     // expect(result).to.equal(5)
   })
