@@ -29,4 +29,11 @@ export let getPayload = (message) => {
   }
 }
 
+export let parsePayloadWrapper = (message) => {
+  const len = message[2 + 6 + 6]
+  const mac1 = message.slice(2, 2 + 6)
+  const mac2 = message.slice(2 + 6, 2 + 6 + 6)
+  return {len, mac1, mac2}
+}
+
 export const hexChar = (b) => b.toString(16)

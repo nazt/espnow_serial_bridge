@@ -52,6 +52,18 @@ describe('src/utils.js', () => {
     })
   })
 
+  describe('parsePayload', () => {
+    it('should parse payload wrapper correctly', () => {
+      const result = Utils.parsePayloadWrapper(validBuffer)
+      expect(result).toMatchObject({
+        mac1: Buffer.from([0x18, 0xfe, 0x34, 0xdb, 0x43, 0x10]),
+        mac2: Buffer.from([0x18, 0xfe, 0x34, 0xda, 0xf4, 0x98]),
+        len: 0x1e
+      })
+      console.log(`result = `, result)
+    })
+  })
+
   describe('checksum function', () => {
     it('should checksum correct', () => {
       const data = validBuffer.slice(0, validBuffer.length - 2)
