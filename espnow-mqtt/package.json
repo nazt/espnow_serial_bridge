@@ -37,11 +37,12 @@
     ]
   },
   "jest": {
+    "projects": [
+      "<rootDir>/src"
+    ],
     "verbose": true,
     "testPathIgnorePatterns": [],
-    "roots": [
-      "."
-    ]
+    "roots": [ "." ]
   },
   "scripts": {
     "test-only": "jest --coverage",

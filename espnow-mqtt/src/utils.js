@@ -14,4 +14,21 @@ export const checksum = (message) => {
   return calculatedSum === checkSum
 }
 
+export const isValidInComingMessage = (message) => {
+  const msgLength = message.length
+  const lastIdx = msgLength - 1
+  const isValidHeaderBytes = (message[0] === 0xfc && message[1] === 0xfd)
+  const isValidEndBytes = (message[lastIdx - 1] === 0x0d && message[lastIdx] === 0x0a)
+  return isValidHeaderBytes && isValidEndBytes
+}
+
+export const getPayload = (message) => {
+  const output = message.slice(message, message.length - 2)
+  if (isValidInComingMessage(message)) {
+    return output
+  } else {
+    return false
+  }
+}
+
 export const hexChar = (b) => b.toString(16)

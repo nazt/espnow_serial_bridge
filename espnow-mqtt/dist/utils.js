@@ -7,9 +7,7 @@ Object.defineProperty(exports, "__esModule", {
  */
 
 var chalk = require('chalk');
-var hexChar = exports.hexChar = function hexChar(b) {
-  return b.toString(16);
-};
+
 var checksum = exports.checksum = function checksum(message) {
   var calculatedSum = 0;
   var checkSum = message[message.length - 1];
@@ -17,7 +15,11 @@ var checksum = exports.checksum = function checksum(message) {
     calculatedSum ^= message[i];
   }
   console.log('calculated sum = ' + chalk.yellow(hexChar(calculatedSum)));
-  console.log('     check sum = ' + chalk.green(hexChar(calculatedSum)));
+  console.log('    >check sum = ' + chalk.green(hexChar(checkSum)));
   return calculatedSum === checkSum;
+};
+
+var hexChar = exports.hexChar = function hexChar(b) {
+  return b.toString(16);
 };
 //# sourceMappingURL=utils.js.map
