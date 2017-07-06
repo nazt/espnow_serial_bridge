@@ -4,7 +4,7 @@
 var chalk = require('chalk')
 
 export const slice = (arr, idx, len) => {
-  arr.slice(idx, idx + len)
+  return arr.slice(idx, idx + len)
 }
 
 export let checksum = (message) => {
@@ -41,12 +41,11 @@ export let parsePayload = (message) => {
   // MAC ADDR   = 6 BYTES
   // DATA LEN   = 1 BYTES
   const IDX = {START_BYTES: 0, MAC_1: 2, MAC_2: 2 + 6, DATA_PAYLOAD: 2 + 6 + 6 + 1}
-  const IDX_END = {START_BYTES: 0, MAC_1: 2 + 6, MAC_2: 2 + 6 + 6}
 
   const len = message[2 + 6 + 6]
-  const mac1 = message.slice(IDX.MAC_1, IDX_END.MAC_1)
-  const mac2 = message.slice(IDX.MAC_2, IDX_END.MAC_2)
-  const dataPayload = message.slice(IDX.DATA_PAYLOAD, IDX.DATA_PAYLOAD + len)
+  const mac1 = slice(message, IDX.MAC_1, 6)
+  const mac2 = slice(message, IDX.MAC_2, 6)
+  const dataPayload = slice(message, IDX.DATA_PAYLOAD, len)
   console.log(`message = `, message)
   console.log(`dataPayload = `, dataPayload)
   return {len, mac1, mac2, data: dataPayload}
