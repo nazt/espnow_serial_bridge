@@ -1,19 +1,23 @@
-"use strict";
+'use strict';
 
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 /** * Created by nat on 7/5/2017 AD.
  */
 
-var checksum = function checksum(message) {
+var chalk = require('chalk');
+var hexChar = exports.hexChar = function hexChar(b) {
+  return b.toString(16);
+};
+var checksum = exports.checksum = function checksum(message) {
   var calculatedSum = 0;
-  var msgLength = message.length;
-  var checkSum = message[msgLength - 1];
-  for (var i = 0; i < msgLength - 1; i++) {
+  var checkSum = message[message.length - 1];
+  for (var i = 0; i < message.length - 1; i++) {
     calculatedSum ^= message[i];
   }
-  console.log("calculated sum = " + calculatedSum.toString(16));
-  console.log("check sum = " + checkSum.toString(16));
+  console.log('calculated sum = ' + chalk.yellow(hexChar(calculatedSum)));
+  console.log('     check sum = ' + chalk.green(hexChar(calculatedSum)));
   return calculatedSum === checkSum;
 };
-
-module.exports = { checksum: checksum };
 //# sourceMappingURL=utils.js.map

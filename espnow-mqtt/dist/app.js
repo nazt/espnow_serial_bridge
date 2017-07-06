@@ -1,38 +1,19 @@
 #!/bin/env node
 'use strict';
 
-var CONFIG = {
-  MQTT: {
-    SUB_TOPIC: process.env.MQTT_SUB_TOPIC || 'CMMC/nat/espnow',
-    PUB_PREFIX: process.env.MQTT_PUB_PREFIX || 'ESPNOW',
-    PUB_TOPIC: process.env.MQTT_PUB_TOPIC,
-    HOST: process.env.MQTT_HOST || 'mqtt.cmmc.io'
-  }
-};
+var _conf = require('./conf');
+
+var _utils = require('./utils');
 
 var chalk = require('chalk');
 var mqtt = require('mqtt');
-var client = mqtt.connect('mqtt://' + CONFIG.MQTT.HOST);
+var client = mqtt.connect('mqtt://' + _conf.CONFIG.MQTT.HOST);
 var moment = require('moment-timezone');
 var _ = require('underscore');
 
-var hexChar = function hexChar(b) {
-  return b.toString(16);
-};
-var checksum = function checksum(message) {
-  var calculatedSum = 0;
-  var checkSum = message[message.length - 1];
-  for (var i = 0; i < message.length - 1; i++) {
-    calculatedSum ^= message[i];
-  }
-  console.log('calculated sum = ' + chalk.yellow(hexChar(calculatedSum)));
-  console.log('     check sum = ' + chalk.green(hexChar(calculatedSum)));
-  return calculatedSum === checkSum;
-};
-
 client.on('connect', function () {
-  console.log('mqtt connected being subscribed to ' + CONFIG.MQTT.SUB_TOPIC);
-  client.subscribe(CONFIG.MQTT.SUB_TOPIC);
+  console.log('mqtt connected being subscribed to ' + _conf.CONFIG.MQTT.SUB_TOPIC);
+  client.subscribe(_conf.CONFIG.MQTT.SUB_TOPIC);
 });
 
 client.on('packetsend', function (packet) {
@@ -55,7 +36,7 @@ client.on('message', function (topic, message) {
   // console.log(`     message = `, message);
 
   var statusObject = {};
-  if (checksum(message)) {
+  if ((0, _utils.checksum)(message)) {
     if (message[0] === 0xfc && message[1] === 0xfd) {
       var mac1 = void 0,
           mac2 = void 0;
@@ -104,7 +85,7 @@ client.on('message', function (topic, message) {
 
         var serializedObjectJsonString = JSON.stringify(statusObject);
         // eslint-disable-next-line no-unused-vars
-        var pubTopics = [CONFIG.MQTT.PUB_PREFIX + '/' + mac1String + '/' + mac2String + '/status', CONFIG.MQTT.PUB_PREFIX + '/raw/' + mac1String + '/' + mac2String + '/status', CONFIG.MQTT.PUB_PREFIX + '/' + mac1String + '/' + name.toString() + '/status'].forEach(function (topic, idx) {
+        var pubTopics = [_conf.CONFIG.MQTT.PUB_PREFIX + '/' + mac1String + '/' + mac2String + '/status', _conf.CONFIG.MQTT.PUB_PREFIX + '/raw/' + mac1String + '/' + mac2String + '/status', _conf.CONFIG.MQTT.PUB_PREFIX + '/' + mac1String + '/' + name.toString() + '/status'].forEach(function (topic, idx) {
           client.publish(topic, serializedObjectJsonString, { retain: false });
         });
       } else {

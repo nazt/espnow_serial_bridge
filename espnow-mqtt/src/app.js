@@ -1,31 +1,13 @@
 #!/bin/env node
 
-const CONFIG = {
-  MQTT: {
-    SUB_TOPIC: process.env.MQTT_SUB_TOPIC || 'CMMC/nat/espnow',
-    PUB_PREFIX: process.env.MQTT_PUB_PREFIX || 'ESPNOW',
-    PUB_TOPIC: process.env.MQTT_PUB_TOPIC,
-    HOST: process.env.MQTT_HOST || 'mqtt.cmmc.io'
-  }
-}
+import { CONFIG } from './conf'
+import { checksum } from './utils'
 
 const chalk = require('chalk')
 const mqtt = require('mqtt')
 const client = mqtt.connect(`mqtt://${CONFIG.MQTT.HOST}`)
 const moment = require('moment-timezone')
 const _ = require('underscore')
-
-let hexChar = (b) => b.toString(16)
-let checksum = (message) => {
-  let calculatedSum = 0
-  let checkSum = message[message.length - 1]
-  for (let i = 0; i < message.length - 1; i++) {
-    calculatedSum ^= message[i]
-  }
-  console.log(`calculated sum = ${chalk.yellow(hexChar(calculatedSum))}`)
-  console.log(`     check sum = ${chalk.green(hexChar(calculatedSum))}`)
-  return calculatedSum === checkSum
-}
 
 client.on('connect', function () {
   console.log(`mqtt connected being subscribed to ${CONFIG.MQTT.SUB_TOPIC}`)
