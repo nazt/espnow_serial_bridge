@@ -23,20 +23,20 @@ describe('src/utils.js', () => {
   beforeEach(() => {
     [type, field1, field2, field3, battery, nameLen, name] = [
       [0x00, 0x00, 0x01], /* type */
-      [0x01, 0x02, 0x03, 0x04], /* field1 */
-      [0x05, 0x06, 0x07, 0x08], /* field2 */
-      [0x00, 0x00, 0x00, 0x00], /* field3 */
-      [0x00, 0x00, 0x00, 0x00], /* battery */
+      [0x64, 0x68, 0x31, 0x78], /* field1 */
+      [0x30, 0x32, 0xc4, 0x9], /* field2 */
+      [0x00, 0x00, 0xdc, 0x5], /* field3 */
+      [0x00, 0x00, 0x00, 0x10], /* battery */
       [6], /* name len: 6 for 'nat001' */
       [hexFromChar('a'), hexFromChar('a'), hexFromChar('t'), 0x07, 0x08, 0x09] /* name */
     ]
 
-    dataBytes = [...type, ...field1, ...field2, ...field3, ...battery, ...nameLen, ...name]
-    dataBytes = [...[0xff, 0xfa], ...dataBytes, Utils.calculateChecksum(Buffer.from(dataBytes))]
+    dataBytes = [...[0xff, 0xfa], ...type, ...field1, ...field2, ...field3, ...battery, ...nameLen, ...name]
+    dataBytes.push(Utils.calculateChecksum(Buffer.from(dataBytes)))
 
-    let packetPayload = [...mac1, ...mac2, dataBytes.length + 1, ...dataBytes]
-    let packetPayloadCRC = Utils.calculateChecksum(Buffer.from(packetPayload))
-    packetPayload = [...[0xfc, 0xfd], ...packetPayload, packetPayloadCRC, ...[0x0d, 0x0a]]
+    let tmp = [...mac1, ...mac2, dataBytes.length, ...dataBytes]
+    let packetSum = Utils.calculateChecksum(Buffer.from(tmp))
+    let packetPayload = [...[0xfc, 0xfd], ...tmp, packetSum, ...[0x0d, 0x0a]]
 
     validBuffer = Buffer.from(packetPayload)
 
@@ -84,6 +84,7 @@ describe('src/utils.js', () => {
     it('should parse payload wrapper correctly', () => {
       console.log(`validBuffer = `, validBuffer)
       const result = Utils.parsePayload(validBuffer)
+      console.log(`result = `, result)
 
       // expect(result).toMatchObject({
       //   mac1: Buffer.from([0x18, 0xfe, 0x34, 0xdb, 0x43, 0x10]),

@@ -1,7 +1,6 @@
 /** * Created by nat on 7/5/2017 AD.
  */
 
-var chalk = require('chalk')
 export const slice = (arr, idx, len) => {
   return arr.slice(idx, idx + len)
 }
@@ -19,9 +18,6 @@ export let checksum = (message) => {
   let checkSum = message[message.length - 1]
   let data = slice(message, 0, message.length - 1)
   let calculatedSum = calculateChecksum(data)
-  console.log(`          >check sum = ${chalk.green(hexChar(checkSum))}`)
-  console.log(`calculated check sum = ${chalk.green(hexChar(calculatedSum))}`)
-  console.log(`checksum result = ${calculatedSum === checkSum}`)
   return calculatedSum === checkSum
 }
 
@@ -52,8 +48,10 @@ export let parsePayload = (message) => {
   const mac2 = slice(message, IDX.MAC_2, 6)
   const dataPayload = slice(message, IDX.DATA_PAYLOAD, len)
   // console.log(`message = `, message)
-  console.log(`dataPayload = `, dataPayload)
-  return {len, mac1, mac2, data: dataPayload}
+  // console.log(`dataPayload = `, dataPayload)
+
+  const result = {len, mac1, mac2, data: dataPayload}
+  return result
 }
 
 export const hexChar = (b) => b.toString(16)
