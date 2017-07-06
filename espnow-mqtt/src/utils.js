@@ -2,7 +2,7 @@
  */
 
 const chalk = require('chalk')
-export const hexChar = (b) => b.toString(16)
+
 export const checksum = (message) => {
   let calculatedSum = 0
   let checkSum = message[message.length - 1]
@@ -10,6 +10,8 @@ export const checksum = (message) => {
     calculatedSum ^= message[i]
   }
   console.log(`calculated sum = ${chalk.yellow(hexChar(calculatedSum))}`)
-  console.log(`     check sum = ${chalk.green(hexChar(calculatedSum))}`)
+  console.log(`    >check sum = ${chalk.green(hexChar(checkSum))}`)
   return calculatedSum === checkSum
 }
+
+export const hexChar = (b) => b.toString(16)
