@@ -78,10 +78,10 @@ export let parseDataPayload = (payload) => {
    `)
   return {
     type: type.toString('hex'),
-    val1: parseInt(val1.toString()),
-    val2: parseInt(val2.toString()),
-    val3: parseInt(val3.toString()),
-    batt: parseInt(batt.toString()),
+    val1: parseInt(val1.toString(), 10),
+    val2: parseInt(val2.toString(), 10),
+    val3: parseInt(val3.toString(), 10),
+    batt: parseInt(batt.toString(), 10),
     name: name.toString()
   }
 }
