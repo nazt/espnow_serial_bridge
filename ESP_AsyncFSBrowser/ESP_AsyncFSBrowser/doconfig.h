@@ -1,8 +1,11 @@
 #include <FS.h>
 #include <ArduinoJson.h>
-
-
+#include <Arduino.h>
 extern void printMacAddress(uint8_t* macaddr);
+
+char deviceName[20];
+extern uint32_t DEEP_SLEEP_S;
+
 
 bool saveConfig(String mac) {
   StaticJsonBuffer<200> jsonBuffer;
@@ -49,12 +52,19 @@ bool loadConfig(uint8_t *master_mac) {
   }
 
   const char* mac = json["mac"];
+  const char* name = json["name"];
+  uint32_t sleep = json["sleepS"];
+
+  strcpy(deviceName, name);
+  DEEP_SLEEP_S = sleep;
+
   String macStr = String(mac);
   for (size_t i = 0; i < 12; i+=2) {
     String mac = macStr.substring(i, i+2);
     byte b = strtoul(mac.c_str(), 0, 16);
     master_mac[i/2] = b;
   }
+
   printMacAddress(master_mac);
 
   return true;

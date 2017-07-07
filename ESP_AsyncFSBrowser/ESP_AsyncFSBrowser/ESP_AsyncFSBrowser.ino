@@ -35,6 +35,8 @@ extern "C" {
 
 ADC_MODE(ADC_VCC);
 
+extern char deviceName[20];
+
 #define MESSAGE_SIZE 48
 uint8_t message[MESSAGE_SIZE] = {0};
 
@@ -75,7 +77,8 @@ bool espnowRetryFlag = false;
 uint8_t espnowRetries = 1;
 
 #define MAX_ESPNOW_RETRIES 30
-#define DEEP_SLEEP_S 5
+uint32_t DEEP_SLEEP_S = 5;
+
 #define ESPNOW_RETRY_DELAY 30
 void initUserEspNow() {
     if (esp_now_init() == 0) {
@@ -251,17 +254,15 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     message[3] = 0x01;
     message[4] = 0x03;
 
-    const char* name = "hellothisiscmmc001";
-
     memcpy(&message[5], (const void * )&field1, 4);
     memcpy(&message[9], (const void * )&field2, 4);
     memcpy(&message[13], (const void * )&field3, 4);
     memcpy(&message[17], (const void * )&battery, 4);
-    message[21] = strlen(name);
-    memcpy(&message[22], name, strlen(name));
+    message[21] = strlen(deviceName);
+    memcpy(&message[22], deviceName, strlen(deviceName));
 
     Serial.println("==========================");
-    Serial.println("print data");
+    Serial.println("       print data         ");
     Serial.println("==========================");
     byte sum = 0;
     for (size_t i = 0; i < MESSAGE_SIZE-1; i++) {
@@ -298,7 +299,6 @@ void loop() {
       readDHTSensor(&temperature_uint32, &humidity_uint32);
       addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
       sendDataToMaster(message, sizeof(message));
-      delay(2000);
-      // goSleep(DEEP_SLEEP_S);
+      goSleep(DEEP_SLEEP_S);
     }
 }
