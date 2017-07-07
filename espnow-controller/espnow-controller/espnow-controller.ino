@@ -89,8 +89,6 @@ void setup() {
   swSerial.write('\n');
 
   bzero(buff, sizeof(buff));
-
-
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb([](uint8_t *client_mac_addr, uint8_t *data, uint8_t len) {
     uint8_t *client_slave_macaddr = client_mac_addr;
@@ -121,37 +119,24 @@ void setup() {
     Serial.println();
     Serial.printf("calculated sum = %02x \r\n", sum);
     Serial.printf(".....check sum = %02x \r\n", data[len-1]);
-    // uint32_t u32_temp;
-    // uint32_t u32_humid;
-    // uint32_t u32_batt;
-    // u32_temp  = (data[14] << 24) | (data[13] << 16) | (data[12] << 8) | (data[11]);
-    // u32_humid = (data[18] << 24) | (data[17] << 16) | (data[16] << 8) | (data[15]);
-    // u32_batt  = (data[22] << 24) | (data[21] << 16) | (data[20] << 8) | (data[19]);
-    //
-    // Serial.printf("temp: %lu \r\n", u32_temp);
-    // Serial.printf("humid: %lu \r\n", u32_humid);
-    // Serial.printf("batt: %lu \r\n", u32_batt);
 
-    Serial.printf("recv len = %d, macaddr len = %d \r\n", len, sizeof(macaddr));
+    Serial.printf("recv payload len = %d, macaddr len = %d \r\n", len, sizeof(macaddr));
+    Serial.printf("espnow payload len = %d, hex = %02x\r\n", len, len);
 
-    //char mac[32] = {0};
-    //snprintf(mac, 32, "%02x:%02x:%02x:%02x:%02x:%02x", MAC2STR(macaddr));
-    // Serial.printf("mac: %s\r\n", mac);
-    // swSerial.write(mac, 32);
-
+    // being prepared
     buff[0] = 0xfc;
     buff[1] = 0xfd;
+    buff[6+6+2] = len;
 
     memcpy(buff+2, self_sta_master_macaddr, 6);
     memcpy(buff+6+2, client_slave_macaddr, 6);
-    buff[6+6+2] = len;
     memcpy(buff+6+2+6+1, data, len);
-    Serial.printf("espnow payload len = %d, hex = %02x\r\n", len, len);
 
     byte sum2 = 0;
     for (size_t i = 1; i <= len+2+6+6; i++) {
       sum2 ^= buff[i-1];
     }
+    // add checksum
     buff[len+2+6+6] = sum2;
 
     for (size_t i = 1; i <= len+2+6+6+1; i++) {
