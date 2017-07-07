@@ -35,7 +35,7 @@ extern "C" {
 
 ADC_MODE(ADC_VCC);
 
-#define MESSAGE_SIZE 30
+#define MESSAGE_SIZE 48
 uint8_t message[MESSAGE_SIZE] = {0};
 
 #define MODE_WEBSERVER 1
@@ -43,7 +43,7 @@ uint8_t message[MESSAGE_SIZE] = {0};
 
 int runMode = MODE_ESPNOW;
 
-#define DHTTYPE       DHT11   // DHT 22  (AM2302), AM2321
+#define DHTTYPE       DHT22  // DHT 22  (AM2302), AM2321
 #define DHTPIN        12
 uint32_t delayMS = 100;
 DHT dht(12, DHTTYPE);
@@ -75,7 +75,7 @@ bool espnowRetryFlag = false;
 uint8_t espnowRetries = 1;
 
 #define MAX_ESPNOW_RETRIES 30
-#define DEEP_SLEEP_S 300
+#define DEEP_SLEEP_S 5
 #define ESPNOW_RETRY_DELAY 30
 void initUserEspNow() {
     if (esp_now_init() == 0) {
@@ -251,16 +251,38 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     message[3] = 0x01;
     message[4] = 0x03;
 
-    memcpy(message + 11, (const void * )&field1, 4);
-    memcpy(message + 15, (const void * )&field2, 4);
-    memcpy(message + 19, (const void * )&field3, 4);
-    memcpy(message + 23, (const void * )&battery, 4);
+    memcpy(&message[5], (const void * )&field1, 4);
+    memcpy(&message[9], (const void * )&field2, 4);
+    memcpy(&message[13], (const void * )&field3, 4);
+    memcpy(&message[17], (const void * )&battery, 4);
+    message[21] = 6;
+    message[22] = 'n';
+    message[23] = 'a';
+    message[24] = 't';
+    message[25] = '0';
+    message[26] = '0';
+    message[27] = '1';
+    message[28] = 0xFF;
 
+    Serial.println("==========================");
+    Serial.println("print data");
+    Serial.println("==========================");
     byte sum = 0;
-    for (size_t i = 0; i < sizeof(message) - 1; i++) {
-        sum ^= message[i];
+    for (size_t i = 0; i < MESSAGE_SIZE-1; i++) {
+      Serial.printf("%02x", message[i]);
+      sum ^= message[i];
+      if ((i+1) % 4 == 0) {
+        Serial.println();
+      }
     }
-    message[MESSAGE_SIZE - 1] = sum;
+
+    message[MESSAGE_SIZE-1] = sum;
+
+    Serial.println();
+    Serial.println("==========================");
+    Serial.printf("calculated sum = %02x \r\n", sum);
+    Serial.printf(".....check sum = %02x \r\n", message[MESSAGE_SIZE-1]);
+
     Serial.printf("field1: %02x - %lu\r\n", field1, field1);
     Serial.printf("field2: %02x - %lu\r\n", field2, field2);
     Serial.printf("field3:  %d \r\n", field3);
@@ -273,21 +295,14 @@ void loop() {
     if (runMode == MODE_WEBSERVER) {
       return;
     } else {
-      uint32_t temperature_uint32 = (uint32_t) dht.readTemperature()*100;
-      uint32_t humidity_uint32 = (uint32_t) dht.readHumidity()*100;
-       //this result unit is centimeter
-      uint32_t cmdistance = 0;
+      uint32_t temperature_uint32;
+      uint32_t humidity_uint32;
+      uint32_t cmdistance = 999; // in cm
+      // write reference
       readDHTSensor(&temperature_uint32, &humidity_uint32);
-
-      // UUID
-      message[5]  = 'd';
-      message[6]  = 'h';
-      message[7]  = '1';
-      message[8]  = 'x';
-      message[9]  = '0';
-      message[10] = '5';
-      addDataField(message, temperature_uint32, humidity_uint32, send_fail_counter);
+      addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
       sendDataToMaster(message, sizeof(message));
-      goSleep(DEEP_SLEEP_S);
+      delay(2000);
+      // goSleep(DEEP_SLEEP_S);
     }
 }
