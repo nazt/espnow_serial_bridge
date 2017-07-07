@@ -72,13 +72,13 @@ describe('src/utils.js', () => {
     })
   })
 
-  describe('getPayload', () => {
+  describe('getPayloadByStrip0D0A', () => {
     it('should return sliced payload when call with valid message', () => {
       const matchedBuffer = validBuffer.slice(0, bufferSize - 2)
-      expect(Utils.getPayload(validBuffer)).toMatchObject(matchedBuffer)
+      expect(Utils.getPayloadByStrip0D0A(validBuffer)).toMatchObject(matchedBuffer)
     })
-    it('should return null when call getPayload with invalidBuffer', () => {
-      expect(Utils.getPayload(invalidEndBytesBuffer)).toBeNull()
+    it('should return null when call getPayloadByStrip0D0A with invalidBuffer', () => {
+      expect(Utils.getPayloadByStrip0D0A(invalidEndBytesBuffer)).toBeNull()
     })
   })
 

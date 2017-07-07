@@ -21,6 +21,11 @@ export let checksum = (message) => {
   return calculatedSum === checkSum
 }
 
+/*
+ * valid is
+ *    startwith 0xfc, 0xfd
+ *    endwith 0x0d 0x0a
+ */
 export let isValidInComingMessage = (message) => {
   const msgLength = message.length
   const lastIdx = msgLength - 1
@@ -29,7 +34,7 @@ export let isValidInComingMessage = (message) => {
   return isValidHeaderBytes && isValidEndBytes
 }
 
-export let getPayload = (message) => {
+export let getPayloadByStrip0D0A = (message) => {
   if (isValidInComingMessage(message)) {
     return message.slice(message, message.length - 2)
   } else {
@@ -57,6 +62,7 @@ export let parsePayload = (message) => {
 }
 
 export let parseDataPayload = (payload) => {
+  console.log(`parseDataPayload = `, typeof payload, payload)
   const type = payload.slice(2, 5)
   const [val1, val2, val3, batt, nameLen] = [
     payload.readUInt32LE(5) || 0,
@@ -86,11 +92,10 @@ export let parseDataPayload = (payload) => {
   }
 }
 
+export const hexChar = (b) => b.toString(16)
 export const hexFromChar = (c) => c.charCodeAt(0)
 export const UInt32LEByte = (val) => {
   const buff = Buffer.allocUnsafe(4)
   buff.writeUInt32LE(val, 0)
   return buff
 }
-
-export const hexChar = (b) => b.toString(16)
