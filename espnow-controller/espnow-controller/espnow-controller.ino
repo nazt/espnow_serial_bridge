@@ -93,32 +93,37 @@ void setup() {
   esp_now_register_recv_cb([](uint8_t *client_mac_addr, uint8_t *data, uint8_t len) {
     uint8_t *client_slave_macaddr = client_mac_addr;
     ledState = !ledState;
-
     Serial.println("recv_cb... incoming mac: ");
+    for (size_t i = 0; i < len; i++) {
+      Serial.printf("%02x", data[i]);
+    }
+    Serial.println();
     printMacAddress(client_mac_addr);
     // printMacAddress(self_sta_master_macaddr);
     // printMacAddress(client_slave_macaddr);
     digitalWrite(LED_BUILTIN, ledState);
 
-    for (size_t i = 0; i < len; i++) {
-      Serial.printf("%02x ", data[i]);
-      if (i%6==0 || i == len-1) {
-        Serial.println();
-      }
-    }
-
+    // print data payload and calculate checksum
     byte sum = 0;
     for (size_t i = 0; i < len; i++) {
+      Serial.printf("%02x ", data[i]);
       if (i == 2 || i == 5 || i == 11 || i == 15 || i == 19 || i == 23 || i == 27) {
         Serial.println();
       }
-      Serial.printf("%02x ", data[i]);
       sum ^= data[i];
     }
 
     Serial.println();
+    Serial.println("==========================");
     Serial.printf("calculated sum = %02x \r\n", sum);
     Serial.printf(".....check sum = %02x \r\n", data[len-1]);
+    if (sum != data[len-1]) {
+      Serial.println("Invalid checksum.");
+    }
+    else {
+      Serial.println("checksum ok!");
+    }
+    Serial.println("==========================");
 
     Serial.printf("recv payload len = %d, macaddr len = %d \r\n", len, sizeof(macaddr));
     Serial.printf("espnow payload len = %d, hex = %02x\r\n", len, len);
@@ -146,6 +151,7 @@ void setup() {
       }
     }
 
+    Serial.println();
     Serial.println("===============");
     Serial.printf("checksum = %02x \r\n", sum2);
     // len + start + mac1 + mac2 + sum
