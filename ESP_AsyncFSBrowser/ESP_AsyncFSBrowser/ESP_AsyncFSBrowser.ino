@@ -251,18 +251,14 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     message[3] = 0x01;
     message[4] = 0x03;
 
+    const char* name = "hellothisiscmmc001";
+
     memcpy(&message[5], (const void * )&field1, 4);
     memcpy(&message[9], (const void * )&field2, 4);
     memcpy(&message[13], (const void * )&field3, 4);
     memcpy(&message[17], (const void * )&battery, 4);
-    message[21] = 6;
-    message[22] = 'n';
-    message[23] = 'a';
-    message[24] = 't';
-    message[25] = '0';
-    message[26] = '0';
-    message[27] = '1';
-    message[28] = 0xFF;
+    message[21] = strlen(name);
+    memcpy(&message[22], name, strlen(name));
 
     Serial.println("==========================");
     Serial.println("print data");
