@@ -105,7 +105,7 @@ void setup() {
 
     // print data payload and calculate checksum
     byte sum = 0;
-    for (size_t i = 0; i < len; i++) {
+    for (size_t i = 0; i < len-1; i++) {
       Serial.printf("%02x ", data[i]);
       if (i == 2 || i == 5 || i == 11 || i == 15 || i == 19 || i == 23 || i == 27) {
         Serial.println();
