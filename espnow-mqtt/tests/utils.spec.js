@@ -1,11 +1,7 @@
 import * as Utils from '../src/utils'
 
-const hexFromChar = (c) => c.charCodeAt(0)
-const UInt32LEByte = (val) => {
-  const buff = Buffer.allocUnsafe(4)
-  buff.writeUInt32LE(val, 0)
-  return buff
-}
+const UInt32LEByte = Utils.UInt32LEByte
+const hexFromChar = Utils.hexFromChar
 
 describe('src/utils.js', () => {
   let validBuffer

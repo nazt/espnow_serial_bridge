@@ -86,4 +86,11 @@ export let parseDataPayload = (payload) => {
   }
 }
 
+export const hexFromChar = (c) => c.charCodeAt(0)
+export const UInt32LEByte = (val) => {
+  const buff = Buffer.allocUnsafe(4)
+  buff.writeUInt32LE(val, 0)
+  return buff
+}
+
 export const hexChar = (b) => b.toString(16)
