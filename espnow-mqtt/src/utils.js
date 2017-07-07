@@ -76,6 +76,14 @@ export let parseDataPayload = (payload) => {
     nameLen= ${nameLen}, hex = ${hexChar(nameLen)}
     name = ${name.toString()}
    `)
+  return {
+    type: type.toString('hex'),
+    val1: parseInt(val1.toString()),
+    val2: parseInt(val2.toString()),
+    val3: parseInt(val3.toString()),
+    batt: parseInt(batt.toString()),
+    name: name.toString()
+  }
 }
 
 export const hexChar = (b) => b.toString(16)

@@ -34,7 +34,7 @@ describe('src/utils.js', () => {
       UInt32LEByte(1111), /* field3 */
       UInt32LEByte(8000), /* battery */
       [6], /* name len: 6 for 'nat001' */
-      [hexFromChar('n'), hexFromChar('a'), hexFromChar('t'), 48, 49, 50] /* name */
+      [hexFromChar('n'), hexFromChar('a'), hexFromChar('t'), 48, 48, 49] /* name */
     ]
 
     dataBytes = [...[0xff, 0xfa], ...type, ...field1, ...field2, ...field3, ...battery, ...nameLen, ...name]
@@ -105,12 +105,13 @@ describe('src/utils.js', () => {
       const result = Utils.parseDataPayload(dataPayload)
       console.log(result)
 
-      // expect(result).toMatchObject({
-      //   mac1: Buffer.from(mac1),
-      //   mac2: Buffer.from(mac2),
-      //   data: Buffer.from(dataBytes),
-      //   len: dataBytes.length
-      // })
+      expect(result).toMatchObject({
+        val1: 3200,
+        val2: 7200,
+        val3: 1111,
+        batt: 8000,
+        name: 'nat001'
+      })
     })
   })
 
