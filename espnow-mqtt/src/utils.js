@@ -41,17 +41,36 @@ export let parsePayload = (message) => {
   // START BYTE = 2 BYTES
   // MAC ADDR   = 6 BYTES
   // DATA LEN   = 1 BYTES
-  const IDX = {START_BYTES: 0, MAC_1: 2, MAC_2: 2 + 6, DATA_PAYLOAD: 2 + 6 + 6 + 1}
+  const IDX = {
+    START_BYTES: 0,
+    MAC_1: 2,
+    MAC_2: 2 + 6,
+    DATA_PAYLOAD: 2 + 6 + 6 + 1
+  }
 
   const len = message[2 + 6 + 6]
   const mac1 = slice(message, IDX.MAC_1, 6)
   const mac2 = slice(message, IDX.MAC_2, 6)
   const dataPayload = slice(message, IDX.DATA_PAYLOAD, len)
-  // console.log(`message = `, message)
-  // console.log(`dataPayload = `, dataPayload)
 
-  const result = {len, mac1, mac2, data: dataPayload}
-  return result
+  return {len, mac1, mac2, data: dataPayload}
+}
+
+export let parseDataPayload = (payload) => {
+  const type = payload.slice(2, 5)
+  const [val1, val2, val3, batt] = [
+    payload.readUInt32LE(5) || 0,
+    payload.readUInt32LE(9) || 0,
+    payload.readUInt32LE(13) || 0,
+    payload.readUInt32LE(17) || 0
+  ]
+
+  console.log(`uint8 byte 17+4 = ${payload.readUInt8(21)}`)
+  console.log(`type = `, type)
+  console.log(`val1 = `, val1)
+  console.log(`val2 = `, val2)
+  console.log(`val3 = `, val3)
+  console.log(`batt = `, batt)
 }
 
 export const hexChar = (b) => b.toString(16)
