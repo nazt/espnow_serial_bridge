@@ -27,11 +27,11 @@ client.on('message', function (topic, message) {
   if (Message.isValidInComingMessage(message)) {
     const payload = Message.getPayloadByStrip0D0A(message)
     if (payload !== null) {
-      console.log(` message = `, message, '\r\n', `payload = `, payload)
       const parsedResult = Message.parsePayload(payload)
-      console.log(`parsedResult = `, parsedResult)
       const parsedData = Message.parseDataPayload(parsedResult.data)
-      console.log(`parsedData = `, parsedData)
+      console.log(` message = `, message, '\r\n', `payload = `, payload)
+      console.log(` parsedResult = `, parsedResult)
+      console.log(` parsedData = `, parsedData)
       // let serializedObjectJsonString = JSON.stringify(statusObject)
       // // eslint-disable-next-line no-unused-vars
       // let pubTopics = [
