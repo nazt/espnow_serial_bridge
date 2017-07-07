@@ -34,7 +34,7 @@ describe('src/utils.js', () => {
       UInt32LEByte(1111), /* field3 */
       UInt32LEByte(8000), /* battery */
       [6], /* name len: 6 for 'nat001' */
-      [hexFromChar('a'), hexFromChar('a'), hexFromChar('t'), 0x07, 0x08, 0x09] /* name */
+      [hexFromChar('n'), hexFromChar('a'), hexFromChar('t'), 48, 49, 50] /* name */
     ]
 
     dataBytes = [...[0xff, 0xfa], ...type, ...field1, ...field2, ...field3, ...battery, ...nameLen, ...name]
