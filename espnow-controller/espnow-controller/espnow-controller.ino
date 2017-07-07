@@ -26,10 +26,9 @@ SoftwareSerial swSerial(rxPin, txPin);
 
 bool ledState = LOW;
 Ticker ticker;
-uint8_t self_ap_slave_macaddr[6];
-uint8_t self_sta_master_macaddr[6];
-
-uint8_t buff[50];
+static  uint8_t self_ap_slave_macaddr[6];
+static  uint8_t self_sta_master_macaddr[6];
+uint8_t buff[64];
 
 // SOFTAP_IF
 void printMacAddress(uint8_t* macaddr) {
@@ -58,17 +57,14 @@ void setup() {
 
   CMMC_DEBUG_PRINTLN("Initializing... Controller..");
   WiFi.mode(WIFI_STA);
-  uint8_t macaddr[6];
 
-  wifi_get_macaddr(STATION_IF, macaddr);
+  wifi_get_macaddr(STATION_IF, self_sta_master_macaddr);
   CMMC_DEBUG_PRINT("[master] address (STATION_IF): ");
-  memcpy(self_sta_master_macaddr, macaddr, 6);
-  printMacAddress(macaddr);
+  printMacAddress(self_sta_master_macaddr);
 
-  wifi_get_macaddr(SOFTAP_IF, macaddr);
+  wifi_get_macaddr(SOFTAP_IF, self_ap_slave_macaddr);
   CMMC_DEBUG_PRINT("[slave] address (SOFTAP_IF): ");
-  printMacAddress(macaddr);
-  memcpy(self_ap_slave_macaddr, macaddr, 6);
+  printMacAddress(self_ap_slave_macaddr);
 
   if (esp_now_init() == 0) {
     CMMC_DEBUG_PRINTLN("direct link  init ok");
@@ -77,21 +73,19 @@ void setup() {
     ESP.restart();
     return;
   }
-
-
-  Serial.println("MASTER: ");
-  printMacAddress(self_sta_master_macaddr);
-
-  swSerial.write(0xFC);
-  swSerial.write(0xFA);
-  swSerial.write(self_ap_slave_macaddr, 6);
-  swSerial.write('\r');
-  swSerial.write('\n');
+  
+  // swSerial.write(0xFC);
+  // swSerial.write(0xFA);
+  // swSerial.write(self_ap_slave_macaddr, 6);
+  // swSerial.write('\r');
+  // swSerial.write('\n');
 
   bzero(buff, sizeof(buff));
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb([](uint8_t *client_mac_addr, uint8_t *data, uint8_t len) {
     uint8_t *client_slave_macaddr = client_mac_addr;
+    Serial.println("MASTER: ");
+    printMacAddress(self_sta_master_macaddr);
     ledState = !ledState;
     Serial.println("recv_cb... incoming mac: ");
     for (size_t i = 0; i < len; i++) {
@@ -125,7 +119,7 @@ void setup() {
     }
     Serial.println("==========================");
 
-    Serial.printf("recv payload len = %d, macaddr len = %d \r\n", len, sizeof(macaddr));
+    Serial.printf("recv payload len = %d, macaddr len = %d \r\n", len, sizeof(self_sta_master_macaddr));
     Serial.printf("espnow payload len = %d, hex = %02x\r\n", len, len);
 
     // being prepared
@@ -144,6 +138,7 @@ void setup() {
     // add checksum
     buff[len+2+6+6] = sum2;
 
+    Serial.println("payload....");
     for (size_t i = 1; i <= len+2+6+6+1; i++) {
       Serial.printf("%02x ", buff[i-1]);
       if (i == 2 || i == 6+2 || i == 6+2+6 || i == 6+2+6+1) {
