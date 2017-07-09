@@ -62,26 +62,17 @@ export let parsePayload = (message) => {
 }
 
 export let parseDataPayload = (payload) => {
-  console.log(`parseDataPayload = `, typeof payload, payload)
-  const type = payload.slice(2, 5)
+  console.log(`parseDataPayload = `, typeof payload, payload, payload.toString('hex'))
+  const type = payload.slice(2, 6)
   const [val1, val2, val3, batt, nameLen] = [
-    payload.readUInt32LE(5) || 0,
-    payload.readUInt32LE(9) || 0,
-    payload.readUInt32LE(13) || 0,
-    payload.readUInt32LE(17) || 0,
-    payload.readUInt8(21)
+    payload.readUInt32LE(6) || 0,
+    payload.readUInt32LE(10) || 0,
+    payload.readUInt32LE(14) || 0,
+    payload.readUInt32LE(18) || 0,
+    payload.readUInt8(22)
   ]
 
-  const name = slice(payload, 22, nameLen)
-  console.log(`
-    type = ${type.toString('hex')}
-    val1 = ${val1}
-    val2 = ${val2}
-    val3 = ${val3}
-    batt = ${batt}
-    nameLen= ${nameLen}, hex = ${hexChar(nameLen)}
-    name = ${name.toString()}
-   `)
+  const name = slice(payload, 23, nameLen)
   return {
     type: type.toString('hex'),
     val1: parseInt(val1.toString(), 10),
