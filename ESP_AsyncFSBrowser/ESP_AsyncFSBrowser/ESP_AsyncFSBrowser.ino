@@ -60,7 +60,7 @@ const char* http_password = "admin";
 uint8_t master_mac[6];
 uint8_t slave_mac[6];
 
-uint32_t dataSentAtMilli;
+uint32_t dataHasBeenSentAtMillis;
 
 // SKETCH BEGIN
 AsyncWebServer server(80);
@@ -70,12 +70,11 @@ CMMC_Blink *blinker;
 
 uint32_t espNowSentSuccessCounter = 0;
 uint32_t espNowSentFailedCounter = 0;
-bool must_send_data = 0;
 Ticker ticker;
-bool longpressed = false;
+bool longPressed = false;
 #include "webserver.h"
 bool espNowSentFlagBeChangedInCallback = false;
-uint8_t espnowRetries = 1;
+uint8_t espNowRetries = 1;
 
 #define MAX_ESPNOW_RETRIES 30
 uint32_t DEEP_SLEEP_S = 5;
@@ -192,9 +191,9 @@ void startModeConfig() {
 
 void checkBootMode() {
     Serial.println("Wating configuration pin..");
-    _wait_config_signal(13,&longpressed);
+    _wait_config_signal(13,&longPressed);
     Serial.println("...Done");
-    if (longpressed) {
+    if (longPressed) {
         runMode = MODE_WEBSERVER;
         startModeConfig();
         setupWebServer();
@@ -233,9 +232,9 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
         delay(ESPNOW_RETRY_DELAY);
         // digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         esp_now_send(master_mac, message_ptr, msg_size);
-        espnowRetries = espnowRetries + 1;
+        espNowRetries = espNowRetries + 1;
         // sleep after reach max retries.
-        if (espnowRetries > MAX_ESPNOW_RETRIES) {
+        if (espNowRetries > MAX_ESPNOW_RETRIES) {
             goSleep(DEEP_SLEEP_S);
         }
     };
@@ -302,6 +301,16 @@ void loop() {
       addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
 
       sendDataToMaster(message, sizeof(message));
-      // goSleep(DEEP_SLEEP_S);
+      dataHasBeenSentAtMillis = millis();
+      while(true) {
+        delay(1000);
+        Serial.println("Waiting a command message...");
+        if (millis() > (dataHasBeenSentAtMillis + 500)) {
+          Serial.println("TIMEOUT!!!!");
+          Serial.println("go to bed!");
+          Serial.println("....BYE");
+          goSleep(DEEP_SLEEP_S);
+        }
+      }
     }
 }
