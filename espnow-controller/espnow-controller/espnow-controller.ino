@@ -2,6 +2,7 @@
 #include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <Ticker.h>
+#include <Task.h>
 extern "C" {
 #include <espnow.h>
 #include <user_interface.h>
@@ -9,7 +10,12 @@ extern "C" {
 #define rxPin 14
 #define txPin 12
 
+TaskManager taskManager;
+void OnWriteSerialTask(uint32_t deltaTime);
+FunctionTask taskSerialWrite(OnWriteSerialTask, MsToTaskTime(10*1000)); // turn off the led in 600ms
+
 SoftwareSerial swSerial(rxPin, txPin);
+bool swSerialLock = false;
 
 #define WIFI_DEFAULT_CHANNEL 1
 #define CMMC_DEBUG_SERIAL 1
@@ -26,8 +32,8 @@ SoftwareSerial swSerial(rxPin, txPin);
 
 bool ledState = LOW;
 Ticker ticker;
-static  uint8_t self_ap_slave_macaddr[6];
-static  uint8_t self_sta_master_macaddr[6];
+uint8_t self_ap_slave_macaddr[6];
+uint8_t self_sta_master_macaddr[6];
 uint8_t buff[64];
 
 // SOFTAP_IF
@@ -40,6 +46,20 @@ void printMacAddress(uint8_t* macaddr) {
   }
   CMMC_DEBUG_PRINTLN("};");
 }
+
+u8 checksum(u8* arr, uint8_t len) {
+  byte sum = 0;
+  for (size_t i = 0; i < len-1; i++) {
+    Serial.printf("%02x ", arr[i]);
+    if (i == 2 || i == 5 || i == 11 || i == 15 || i == 19 || i == 23 || i == 27) {
+      Serial.println();
+    }
+    sum ^= arr[i];
+  }
+  Serial.printf("checksum = %lu\r\n", sum);
+  return sum;
+}
+
 
 void setup() {
   #if CMMC_DEBUG_SERIAL
@@ -73,12 +93,6 @@ void setup() {
     ESP.restart();
     return;
   }
-  
-  // swSerial.write(0xFC);
-  // swSerial.write(0xFA);
-  // swSerial.write(self_ap_slave_macaddr, 6);
-  // swSerial.write('\r');
-  // swSerial.write('\n');
 
   bzero(buff, sizeof(buff));
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
@@ -87,25 +101,18 @@ void setup() {
     Serial.println("MASTER: ");
     printMacAddress(self_sta_master_macaddr);
     ledState = !ledState;
-    Serial.println("recv_cb... incoming mac: ");
+    digitalWrite(LED_BUILTIN, ledState);
+    Serial.println("recv_cb... with payload: ");
     for (size_t i = 0; i < len; i++) {
       Serial.printf("%02x", data[i]);
     }
+
+
     Serial.println();
     printMacAddress(client_mac_addr);
-    // printMacAddress(self_sta_master_macaddr);
-    // printMacAddress(client_slave_macaddr);
-    digitalWrite(LED_BUILTIN, ledState);
 
     // print data payload and calculate checksum
-    byte sum = 0;
-    for (size_t i = 0; i < len-1; i++) {
-      Serial.printf("%02x ", data[i]);
-      if (i == 2 || i == 5 || i == 11 || i == 15 || i == 19 || i == 23 || i == 27) {
-        Serial.println();
-      }
-      sum ^= data[i];
-    }
+    u8 sum = checksum(data, len);
 
     Serial.println();
     Serial.println("==========================");
@@ -135,6 +142,8 @@ void setup() {
     for (size_t i = 1; i <= len+2+6+6; i++) {
       sum2 ^= buff[i-1];
     }
+
+    // const uint8_t CHECKSUM_IDX = 2+
     // add checksum
     buff[len+2+6+6] = sum2;
 
@@ -146,16 +155,39 @@ void setup() {
       }
     }
 
-    Serial.println();
-    Serial.println("===============");
+    Serial.printf("\r\n===============\r\n");
     Serial.printf("checksum = %02x \r\n", sum2);
+    swSerialLock = true;
     // len + start + mac1 + mac2 + sum
     swSerial.write(buff, len+2+6+6+1);
     swSerial.write('\r');
     swSerial.write('\n');
+    swSerial.flush();
+    swSerialLock = false;
 
     Serial.println();
     Serial.printf("free heap = %lu \r\n", ESP.getFreeHeap());
+    Serial.printf("peer is exist status = %d \r\n",
+                        esp_now_is_peer_exist(client_mac_addr));
+    if (esp_now_is_peer_exist(client_mac_addr) == 0) {
+      Serial.printf("peer is not exists... \r\n");
+      int add_peer_status = esp_now_add_peer(client_mac_addr,
+                            ESP_NOW_ROLE_SLAVE, WIFI_DEFAULT_CHANNEL, NULL, 0);
+      if (add_peer_status  == 0) {
+        Serial.println("add_peer_status is ok!");
+        // fetch peer
+        u8* peer = esp_now_fetch_peer(true);
+        uint8_t d[1] = {0x0a};
+        esp_now_send(peer, d, 1);
+        esp_now_del_peer(peer);
+      }
+      else {
+        Serial.println("add_peer_status is failed!");
+      }
+    }
+    else {
+      Serial.printf("peer is exists in db... \r\n");
+    }
   });
 
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
@@ -173,12 +205,39 @@ void setup() {
     }
     Serial.printf("[SUCCESS] = %lu/%lu \r\n", ok, ok + fail);
   });
-  // DEBUG_PRINTF("ADD PEER: %d\r\n", add_peer_status);
+
+  taskManager.StartTask(&taskSerialWrite); // start with turning it on
 }
 
+
 void loop() {
-  yield();
+  taskManager.Loop();
   while(swSerial.available()) {
     // Serial.write(swSerial.read());
   }
+}
+
+void OnWriteSerialTask(uint32_t deltaTime)
+{
+  static u8 registerMessageBuffer[50] = {
+    0xff, 0xfa, 0xff, 0xff, 0xff, 0xff,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0xff,
+    0x0d, 0x0a
+  };
+
+
+  // being prepared
+  memcpy(registerMessageBuffer+2+4, self_ap_slave_macaddr, 6);
+  memcpy(registerMessageBuffer+2+4+6, self_sta_master_macaddr, 6);
+  u8 sum = checksum(registerMessageBuffer, 18);
+  registerMessageBuffer[18] = sum;
+  while (swSerialLock) {
+    Serial.printf("swSerial is locked waiting... \r\n");;;;
+    delay(10);
+  }
+  uint8_t wroteBytes = swSerial.write(registerMessageBuffer, 21);
+  Serial.printf("wrote %d \r\n", wroteBytes);
+  swSerial.flush();
 }
