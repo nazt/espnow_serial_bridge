@@ -29,7 +29,8 @@ export let checksum = (message) => {
 export let isValidInComingMessage = (message) => {
   const msgLength = message.length
   const lastIdx = msgLength - 1
-  const isValidHeaderBytes = (message[0] === 0xfc && message[1] === 0xfd)
+  const isValidHeaderBytes = ((message[0] === 0xfc && message[1] === 0xfd) ||
+    (message[0] === 0xfa && message[1] === 0xfb))
   const isValidEndBytes = (message[lastIdx - 1] === 0x0d && message[lastIdx] === 0x0a)
   return isValidHeaderBytes && isValidEndBytes
 }
@@ -42,10 +43,12 @@ export let getPayloadByStrip0D0A = (message) => {
   }
 }
 
-export let parsePayload = (message) => {
+export let parsePayload = (payload) => {
   // START BYTE = 2 BYTES
   // MAC ADDR   = 6 BYTES
   // DATA LEN   = 1 BYTES
+  const startBytes = slice(payload, 0, 2)
+
   const IDX = {
     START_BYTES: 0,
     MAC_1: 2,
@@ -53,12 +56,19 @@ export let parsePayload = (message) => {
     DATA_PAYLOAD: 2 + 6 + 6 + 1
   }
 
-  const len = message[2 + 6 + 6]
-  const mac1 = slice(message, IDX.MAC_1, 6)
-  const mac2 = slice(message, IDX.MAC_2, 6)
-  const dataPayload = slice(message, IDX.DATA_PAYLOAD, len)
-
-  return {len, mac1, mac2, data: dataPayload}
+  if (startBytes.equals(createBufferFromHexString('fafb'))) {
+    const mac1 = slice(payload, IDX.MAC_1, 6)
+    const mac2 = slice(payload, IDX.MAC_2, 6)
+    // const type = payload.slice(2, 6)
+    // const [val1, val2, val3, batt, nameLen] = [
+    return {mac1, mac2, data: ''}
+  } else if (startBytes.equals(createBufferFromHexString('fcfd'))) {
+    const mac1 = slice(payload, IDX.MAC_1, 6)
+    const mac2 = slice(payload, IDX.MAC_2, 6)
+    const len = payload[2 + 6 + 6]
+    const dataPayload = slice(payload, IDX.DATA_PAYLOAD, len)
+    return {len, mac1, mac2, data: dataPayload}
+  }
 }
 
 export let parseDataPayload = (payload) => {
@@ -83,10 +93,32 @@ export let parseDataPayload = (payload) => {
   }
 }
 
+export const getPayloadType = (payload) => {
+  const startBytes = slice(payload, 0, 2)
+  if (startBytes.equals(createBufferFromHexString('fafb'))) {
+    return CONST.PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION
+  } else if (startBytes.equals(createBufferFromHexString('fcfd'))) {
+    return CONST.PAYLOAD_FCFD_TYPE_DATA
+  }
+  else {
+    return CONST.PAYLOAD_TYPE_UNKNOWN
+  }
+}
+
 export const hexChar = (b) => b.toString(16)
 export const hexFromChar = (c) => c.charCodeAt(0)
 export const UInt32LEByte = (val) => {
   const buff = Buffer.allocUnsafe(4)
   buff.writeUInt32LE(val, 0)
   return buff
+}
+
+export const createBufferFromHexString = (input) => {
+  return Buffer.from(input, 'hex')
+}
+
+export const CONST = {
+  PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION: 'PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION',
+  PAYLOAD_FCFD_TYPE_DATA: 'PAYLOAD_FCFD_TYPE_DATA',
+  PAYLOAD_TYPE_UNKNOWN: 'PAYLOAD_TYPE_UNKNOWN'
 }
