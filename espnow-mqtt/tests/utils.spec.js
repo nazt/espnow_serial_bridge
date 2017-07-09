@@ -24,7 +24,7 @@ describe('src/utils.js', () => {
 
   beforeEach(() => {
     [type, field1, field2, field3, battery, nameLen, name] = [
-      [0x00, 0x00, 0x01], /* type */
+      [0x01, 0x02, 0x03, 0x01], /* type */
       UInt32LEByte(3200), /* field1 */
       UInt32LEByte(7200), /* field2 */
       UInt32LEByte(1111), /* field3 */
