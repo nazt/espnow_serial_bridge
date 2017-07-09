@@ -206,6 +206,7 @@ void setup() {
     Serial.printf("[SUCCESS] = %lu/%lu \r\n", ok, ok + fail);
   });
 
+  OnWriteSerialTask(0);
   taskManager.StartTask(&taskSerialWrite); // start with turning it on
 }
 
@@ -220,7 +221,7 @@ void loop() {
 void OnWriteSerialTask(uint32_t deltaTime)
 {
   static u8 registerMessageBuffer[50] = {
-    0xff, 0xfa, 0xff, 0xff, 0xff, 0xff,
+    0xfa, 0xfb, 0xff, 0xff, 0xff, 0xff,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0xff,
