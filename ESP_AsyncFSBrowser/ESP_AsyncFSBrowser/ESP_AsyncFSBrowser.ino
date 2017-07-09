@@ -60,20 +60,21 @@ const char* http_password = "admin";
 uint8_t master_mac[6];
 uint8_t slave_mac[6];
 
+uint32_t dataSentAtMilli;
+
 // SKETCH BEGIN
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 CMMC_Blink *blinker;
 
-uint32_t counter = 0;
-uint32_t send_ok_counter = 0;
-uint32_t send_fail_counter = 0;
+uint32_t espNowSentSuccessCounter = 0;
+uint32_t espNowSentFailedCounter = 0;
 bool must_send_data = 0;
 Ticker ticker;
 bool longpressed = false;
 #include "webserver.h"
-bool espnowRetryFlag = false;
+bool espNowSentFlagBeChangedInCallback = false;
 uint8_t espnowRetries = 1;
 
 #define MAX_ESPNOW_RETRIES 30
@@ -113,15 +114,14 @@ void initUserEspNow() {
         CMMC_DEBUG_PRINT("send to mac addr: ");
         printMacAddress(macaddr);
         if (status == 0) {
-            espnowRetryFlag = false;
-            send_ok_counter++;
-            counter++;
-            CMMC_DEBUG_PRINTF("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter, send_ok_counter + send_fail_counter);
-            // digitalWrite(LED_BUILTIN, HIGH);
+            espNowSentFlagBeChangedInCallback = false;
+            espNowSentSuccessCounter++;
+            CMMC_DEBUG_PRINTF("... send_cb OK. [%lu/%lu]\r\n",
+            espNowSentSuccessCounter, espNowSentSuccessCounter + espNowSentFailedCounter);
         } else {
-            espnowRetryFlag = true;
-            send_fail_counter++;
-            CMMC_DEBUG_PRINTF("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter, send_ok_counter + send_fail_counter);
+            espNowSentFlagBeChangedInCallback = true;
+            espNowSentFailedCounter++;
+            CMMC_DEBUG_PRINTF("... send_cb FAILED. [%lu/%lu]\r\n", espNowSentSuccessCounter, espNowSentSuccessCounter + espNowSentFailedCounter);
         }
     });
 };
@@ -156,6 +156,7 @@ void initGpio() {
 }
 
 void printAndStoreEspNowMacInfo() {
+    uint8_t macaddr[6];
     Serial.println("====================");
     Serial.println("    MODE = ESPNOW   ");
     Serial.println("====================");
@@ -163,7 +164,6 @@ void printAndStoreEspNowMacInfo() {
     Serial.println("Initializing ESPNOW...");
     CMMC_DEBUG_PRINTLN("Initializing... SLAVE");
     WiFi.mode(WIFI_AP_STA);
-    uint8_t macaddr[6];
     wifi_get_macaddr(STATION_IF, macaddr);
     CMMC_DEBUG_PRINT("[master] mac address (STATION_IF): ");
     printMacAddress(macaddr);
@@ -173,6 +173,7 @@ void printAndStoreEspNowMacInfo() {
     printMacAddress(macaddr);
     memcpy(slave_mac, macaddr, 6);
 }
+
 void startModeConfig() {
     Serial.println("====================");
     Serial.println("   MODE = CONFIG    ");
@@ -225,14 +226,14 @@ void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
     // transmit
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     esp_now_send(master_mac, message_ptr, msg_size);
-    delay(ESPNOW_RETRY_DELAY);
+    delay(10);
 
     // retransmitt when failed
-    while (espnowRetryFlag) {
+    while (espNowSentFlagBeChangedInCallback) {
+        delay(ESPNOW_RETRY_DELAY);
         // digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         esp_now_send(master_mac, message_ptr, msg_size);
         espnowRetries = espnowRetries + 1;
-        delay(ESPNOW_RETRY_DELAY);
         // sleep after reach max retries.
         if (espnowRetries > MAX_ESPNOW_RETRIES) {
             goSleep(DEEP_SLEEP_S);
@@ -254,12 +255,12 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     message[3] = 0x01;
     message[4] = 0x03;
 
-    memcpy(&message[5], (const void * )&field1, 4);
-    memcpy(&message[9], (const void * )&field2, 4);
-    memcpy(&message[13], (const void * )&field3, 4);
-    memcpy(&message[17], (const void * )&battery, 4);
-    message[21] = strlen(deviceName);
+    memcpy(&message[5], (const void *)&field1, 4);
+    memcpy(&message[9], (const void *)&field2, 4);
+    memcpy(&message[13], (const void *)&field3, 4);
+    memcpy(&message[17], (const void *)&battery, 4);
     memcpy(&message[22], deviceName, strlen(deviceName));
+    message[21] = strlen(deviceName);
 
     Serial.println("==========================");
     Serial.println("       print data         ");
@@ -286,6 +287,7 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     Serial.printf("batt: %d \r\n", battery);
 }
 
+
 void loop() {
     bzero(message, sizeof(message));
     ArduinoOTA.handle();
@@ -298,7 +300,8 @@ void loop() {
       // write reference
       readDHTSensor(&temperature_uint32, &humidity_uint32);
       addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
+
       sendDataToMaster(message, sizeof(message));
-      goSleep(DEEP_SLEEP_S);
+      // goSleep(DEEP_SLEEP_S);
     }
 }
