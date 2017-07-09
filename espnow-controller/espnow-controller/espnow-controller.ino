@@ -49,14 +49,14 @@ void printMacAddress(uint8_t* macaddr) {
 
 u8 checksum(u8* arr, uint8_t len) {
   byte sum = 0;
-  for (size_t i = 0; i < len-1; i++) {
+  for (size_t i = 0; i < len; i++) {
     Serial.printf("%02x ", arr[i]);
     if (i == 2 || i == 5 || i == 11 || i == 15 || i == 19 || i == 23 || i == 27) {
       Serial.println();
     }
     sum ^= arr[i];
   }
-  Serial.printf("checksum = %lu\r\n", sum);
+  Serial.printf("last byte = %lu, checksum = %lu\r\n", arr[len-1], sum);
   return sum;
 }
 
