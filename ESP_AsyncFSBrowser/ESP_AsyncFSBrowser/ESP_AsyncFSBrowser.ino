@@ -97,15 +97,14 @@ void initUserEspNow() {
         // CMMC_DEBUG_PRINTLN("recv_cb");
         // CMMC_DEBUG_PRINT("mac address: ");
         // printMacAddress(macaddr);
+        // digitalWrite(LED_BUILTIN, data[0]);
         CMMC_DEBUG_PRINT("data: ");
         for (int i = 0; i < len; i++) {
             CMMC_DEBUG_PRINT(" 0x");
             CMMC_DEBUG_PRINT(data[i], HEX);
         }
-
-        CMMC_DEBUG_PRINT(data[0], DEC);
-        CMMC_DEBUG_PRINTLN("");
-        digitalWrite(LED_BUILTIN, data[0]);
+        Serial.printf("\r\n");
+        goSleep(60*data[0]);
     });
 
     esp_now_register_send_cb([](uint8_t * macaddr, uint8_t status) {
@@ -251,15 +250,16 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     message[1] = 0xfa;
 
     message[2] = 0x01;
-    message[3] = 0x01;
+    message[3] = 0x02;
     message[4] = 0x03;
+    message[5] = 0x01;
 
-    memcpy(&message[5], (const void *)&field1, 4);
-    memcpy(&message[9], (const void *)&field2, 4);
-    memcpy(&message[13], (const void *)&field3, 4);
-    memcpy(&message[17], (const void *)&battery, 4);
-    memcpy(&message[22], deviceName, strlen(deviceName));
-    message[21] = strlen(deviceName);
+    memcpy(&message[6], (const void *)&field1, 4);
+    memcpy(&message[10], (const void *)&field2, 4);
+    memcpy(&message[14], (const void *)&field3, 4);
+    memcpy(&message[18], (const void *)&battery, 4);
+    message[22] = strlen(deviceName);
+    memcpy(&message[23], deviceName, strlen(deviceName));
 
     Serial.println("==========================");
     Serial.println("       print data         ");
@@ -301,6 +301,8 @@ void loop() {
       addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
 
       sendDataToMaster(message, sizeof(message));
+
+      // wait for a command message.
       dataHasBeenSentAtMillis = millis();
       while(true) {
         delay(1000);
