@@ -115,11 +115,15 @@ void initUserEspNow() {
             espNowSentFlagBeChangedInCallback = false;
             espNowSentSuccessCounter++;
             CMMC_DEBUG_PRINTF("... send_cb OK. [%lu/%lu]\r\n",
-            espNowSentSuccessCounter, espNowSentSuccessCounter + espNowSentFailedCounter);
+            espNowSentSuccessCounter,
+            espNowSentSuccessCounter + espNowSentFailedCounter);
         } else {
             espNowSentFlagBeChangedInCallback = true;
             espNowSentFailedCounter++;
-            CMMC_DEBUG_PRINTF("... send_cb FAILED. [%lu/%lu]\r\n", espNowSentSuccessCounter, espNowSentSuccessCounter + espNowSentFailedCounter);
+
+            CMMC_DEBUG_PRINTF("... send_cb FAILED. [%lu/%lu]\r\n",
+              espNowSentSuccessCounter,
+              espNowSentSuccessCounter + espNowSentFailedCounter);
         }
     });
 };

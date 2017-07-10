@@ -27,8 +27,6 @@ client.on('message', function (topic, message) {
     const payload = Message.getPayloadByStrip0D0A(message)
     if (payload !== null) {
       const parsedResult = Message.parsePayload(payload)
-      console.log(parsedResult)
-
       if (parsedResult.payloadType === Message.Constants.PAYLOAD_FCFD_TYPE_DATA) {
         const parsedData = Message.parseDataPayload(parsedResult.data, Message.getPayloadType(message))
         console.log(` parsedData = `, parsedData)
@@ -45,17 +43,25 @@ client.on('message', function (topic, message) {
           client.publish(topic, serializedObjectJsonString, {retain: false})
         })
         */
+      } else if (parsedResult.payloadType === Message.Constants.PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION) {
+        let mac1 = parsedResult.mac1
+        delete parsedResult.payloadType
+        parsedResult.time = new Date().getTime()
+        let serializedDevice = JSON.stringify(parsedResult)
+        let pubTopics = [`${CONFIG.MQTT.PUB_PREFIX}/${mac1}/command`]
+        pubTopics.forEach((topic, idx) => {
+          client.publish(topic, serializedDevice, {retain: false})
+        })
       }
+    } else {
+      console.log(message)
+      console.log('================')
+      console.log('================')
+      console.log(message.length)
+      console.log('invalid packet header.')
+      console.log('================')
+      console.log('================')
     }
-  } else {
-    console.log(message)
-    console.log('================')
-    console.log('================')
-    console.log(message.length)
-    console.log('invalid packet header.')
-    console.log('================')
-    console.log('================')
   }
 })
-
 console.log(`Application started ${moment().tz('Asia/Bangkok')}`)
