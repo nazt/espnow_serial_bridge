@@ -177,8 +177,8 @@ void setup() {
         Serial.println("add_peer_status is ok!");
         // fetch peer
         u8* peer = esp_now_fetch_peer(true);
-        uint8_t d[1] = {0x0a};
-        esp_now_send(peer, d, 1);
+        uint8_t sleepForM = 1;
+        esp_now_send(peer, &sleepForM, 1);
         esp_now_del_peer(peer);
       }
       else {
@@ -219,7 +219,7 @@ void loop() {
 }
 
 void OnWriteSerialTask(uint32_t deltaTime)
-{
+  {
   static u8 registerMessageBuffer[50] = {
     0xfa, 0xfb, 0xff, 0xff, 0xff, 0xff,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -230,8 +230,8 @@ void OnWriteSerialTask(uint32_t deltaTime)
 
 
   // being prepared
-  memcpy(registerMessageBuffer+2+4, self_ap_slave_macaddr, 6);
-  memcpy(registerMessageBuffer+2+4+6, self_sta_master_macaddr, 6);
+  memcpy(registerMessageBuffer+2+4, self_sta_master_macaddr, 6);
+  memcpy(registerMessageBuffer+2+4+6, self_ap_slave_macaddr, 6);
   u8 sum = checksum(registerMessageBuffer, 18);
   registerMessageBuffer[18] = sum;
   while (swSerialLock) {
