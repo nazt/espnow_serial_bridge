@@ -256,29 +256,6 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     message[2] = 0x01;
     message[3] = 0x02;
     message[4] = 0x03;
-<<<<<<< HEAD
-
-    // UUID
-    message[5]  = 't';
-    message[6]  = 'e';
-    message[7]  = 's';
-    message[8]  = 't';
-    message[9]  = 'p';
-    message[10] = '9';
-
-
-
-  	uint32_t cmdistance = ultrasonic.distanceRead();//this result unit is centimeter
-
-
-    pinMode(A0, INPUT);
-    uint32_t battery = (analogRead(A0) * 5000) / 880;
-
-    memcpy(message+11, (const void*)&temperature_uint32, 4);
-    memcpy(message+15, (const void*)&humidity_uint32, 4);
-    memcpy(message+19, (const void*)&cmdistance, 4);
-    memcpy(message+23, (const void*)&battery, 4);
-=======
     message[5] = 0x01;
 
     memcpy(&message[6], (const void *)&field1, 4);
@@ -291,7 +268,6 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     Serial.println("==========================");
     Serial.println("       print data         ");
     Serial.println("==========================");
->>>>>>> 4455717c4bb03bcc26e7423b3530691cd61ac97a
     byte sum = 0;
     for (size_t i = 0; i < MESSAGE_SIZE-1; i++) {
       Serial.printf("%02x", message[i]);
@@ -314,12 +290,6 @@ void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t f
     Serial.printf("batt: %d \r\n", battery);
 }
 
-<<<<<<< HEAD
-
-    ESP.deepSleep(1000000*9); // 10 sec
-
-=======
->>>>>>> 4455717c4bb03bcc26e7423b3530691cd61ac97a
 
 void loop() {
     bzero(message, sizeof(message));
