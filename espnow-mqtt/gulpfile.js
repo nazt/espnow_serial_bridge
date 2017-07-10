@@ -1,4 +1,4 @@
-var gulp = require('gulp')
+const gulp = require('gulp')
 require('babel-register')
 
 let $ = require('gulp-load-plugins')()

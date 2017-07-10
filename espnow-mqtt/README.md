@@ -13,3 +13,8 @@ don't forget to change your project name in `package.json`
     $ npm install -g forever
     $ forever dist/app.js
 
+
+## Unit Testing
+
+    $ cd tests
+    $ jest

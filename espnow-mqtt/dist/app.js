@@ -1,58 +1,51 @@
+#!/bin/env node
 'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
+var _conf = require('./conf');
 
-exports.default = function (a, b) {
-  return a + b;
-};
+var _utils = require('./utils');
 
+var chalk = require('chalk');
 var mqtt = require('mqtt');
-var client = mqtt.connect('mqtt://mqtt.cmmc.io');
-var moment = require('moment');
-
-var checksum = function checksum(message) {
-  var calculatedSum = 0;
-  var checkSum = message[message.length - 1];
-  for (var i = 0; i < message.length - 1; i++) {
-    var v = message[i];
-    calculatedSum ^= v;
-  }
-  console.log('calculated sum = ' + calculatedSum.toString(16));
-  console.log('check sum = ' + checkSum.toString(16));
-  return calculatedSum === checkSum;
-};
+var client = mqtt.connect('mqtt://' + _conf.CONFIG.MQTT.HOST);
+var moment = require('moment-timezone');
+var _ = require('underscore');
 
 client.on('connect', function () {
-  client.subscribe('CMMC/espnow/#');
+  console.log('mqtt connected being subscribed to ' + _conf.CONFIG.MQTT.SUB_TOPIC);
+  client.subscribe(_conf.CONFIG.MQTT.SUB_TOPIC);
+});
+
+client.on('packetsend', function (packet) {
+  // console.log(`packetsend`, packet);
+  if (packet.cmd === 'publish') {
+    console.log('published to ' + chalk.green(packet.topic));
+  } else if (packet.cmd === 'subscribe') {
+    console.log('send subscriptions to ' + chalk.green(JSON.stringify(packet.subscriptions)));
+  }
 });
 
 client.on('message', function (topic, message) {
-  console.log('================');
-  if (message[message.length - 1] === 0x0d) {
-    message = message.slice(0, message.length - 1);
-  }
+  console.log('==================================');
+  // console.log(`orig message = `, message);
 
-  console.log(message);
-  console.log('================');
-  console.log(message.length);
+  // rhythm 0xd0xa$
+  if (message[message.length - 2] === 0x0d) {
+    message = message.slice(0, message.length - 2);
+  }
+  // console.log(`     message = `, message);
 
   var statusObject = {};
-  if (checksum(message)) {
-    var mac1 = void 0,
-        mac2 = void 0;
+  if ((0, _utils.checksum)(message)) {
     if (message[0] === 0xfc && message[1] === 0xfd) {
-      console.log(message);
-      mac1 = message.slice(2, 2 + 6);
-      mac2 = message.slice(2 + 6, 2 + 6 + 6);
       var len = message[2 + 6 + 6];
+      var mac1 = message.slice(2, 2 + 6);
+      var mac2 = message.slice(2 + 6, 2 + 6 + 6);
       var payload = message.slice(2 + 6 + 6 + 1, message.length - 1);
-      console.log('len = ' + len + ', payload = ' + payload.toString('hex'));
-      // if (checksum(payload)) {
-      //   console.log('YAY!')
-      // }
+
       if (payload[0] === 0xff && payload[1] === 0xfa) {
+        var _payload = payload.slice(2).toString('hex');
+        console.log('len = ' + chalk.cyan(len) + ', payload = ' + chalk.yellow('fffa') + chalk.cyan(_payload));
         var type = payload.slice(2, 5);
         var name = payload.slice(5, 11);
         var mac1String = mac1.toString('hex');
@@ -63,38 +56,50 @@ client.on('message', function (topic, message) {
             batt = payload.readUInt32LE(23) || 0;
 
 
-        console.log('type = ', type);
-        console.log('name = ', name.toString());
-        console.log('val1 = ', val1);
-        console.log('val2 = ', val2);
-        console.log('val3 = ', val3);
-        console.log('batt = ', batt);
-        console.log('[master] mac1 = ', mac1String);
-        console.log('[ slave] mac2 = ', mac2String);
+        _.extend(statusObject, {
+          myName: name.toString(),
+          type: type.toString('hex'),
+          sensor: type.toString('hex'),
+          val1: parseInt(val1.toString()),
+          val2: parseInt(val2.toString()),
+          val3: parseInt(val3.toString()),
+          batt: parseInt(batt.toString()),
+          mac1: mac1String,
+          mac2: mac2String,
+          updated: moment().unix().toString(),
+          updatedText: moment().tz('Asia/Bangkok').format('DD/MMMM/YYYY, hh:mm:ss a')
+        });
 
-        statusObject.myName = name.toString();
-        statusObject.type = type.toString('hex');
-        statusObject.sensor = type.toString('hex');
-        statusObject.val1 = parseInt(val1.toString());
-        statusObject.val2 = parseInt(val2.toString());
-        statusObject.val3 = parseInt(val3.toString());
-        statusObject.batt = parseInt(batt.toString());
-        statusObject.mac1 = mac1String;
-        statusObject.mac2 = mac2String;
-        statusObject.updated = moment().unix().toString();
-        statusObject.updatedText = moment().format('MMMM Do YYYY, h:mm:ss a');
+        console.log('==================================');
+        console.log('type = ', statusObject.type);
+        console.log('name = ', statusObject.name);
+        console.log('val1 = ', statusObject.val1);
+        console.log('val2 = ', statusObject.val2);
+        console.log('val3 = ', statusObject.val3);
+        console.log('batt = ', statusObject.batt);
+        console.log('[master] mac1 = ', statusObject.mac1);
+        console.log('[ slave] mac2 = ', statusObject.mac2);
+        console.log('==================================');
 
-        client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/batt', batt.toString(), { retain: true });
-        client.publish('CMMC/espnow/' + mac1String + '/' + mac2String + '/status', JSON.stringify(statusObject), { retain: true });
-        client.publish('CMMC/espnow/' + mac1String + '/' + name.toString() + '/status', JSON.stringify(statusObject), { retain: true });
+        var serializedObjectJsonString = JSON.stringify(statusObject);
+        // eslint-disable-next-line no-unused-vars
+        var pubTopics = [_conf.CONFIG.MQTT.PUB_PREFIX + '/' + mac1String + '/' + mac2String + '/status', _conf.CONFIG.MQTT.PUB_PREFIX + '/raw/' + mac1String + '/' + mac2String + '/status', _conf.CONFIG.MQTT.PUB_PREFIX + '/' + mac1String + '/' + name.toString() + '/status'].forEach(function (topic, idx) {
+          client.publish(topic, serializedObjectJsonString, { retain: false });
+        });
       } else {
         console.log('invalid header');
       }
     }
   } else {
+    console.log(message);
+    console.log('================');
+    console.log('================');
+    console.log(message.length);
     console.log('invalid checksum');
+    console.log('================');
+    console.log('================');
   }
 });
 
-console.log('started');
+console.log('Application started ' + moment().tz('Asia/Bangkok'));
 //# sourceMappingURL=app.js.map
