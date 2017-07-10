@@ -12,7 +12,7 @@ extern "C" {
 
 TaskManager taskManager;
 void OnWriteSerialTask(uint32_t deltaTime);
-FunctionTask taskSerialWrite(OnWriteSerialTask, MsToTaskTime(10*1000)); // turn off the led in 600ms
+FunctionTask taskSerialWrite(OnWriteSerialTask, MsToTaskTime(30*1000)); // turn off the led in 600ms
 
 SoftwareSerial swSerial(rxPin, txPin);
 bool swSerialLock = false;
