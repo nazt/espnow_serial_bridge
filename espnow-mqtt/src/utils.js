@@ -59,14 +59,14 @@ export let parsePayload = (payload) => {
 
   if (payloadType === Constants.PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION) {
     // const type = payload.slice(2, 6)
-    const mac1 = slice(payload, IDX.MAC_1 + 4, 6)
-    const mac2 = slice(payload, IDX.MAC_2 + 4, 6)
+    const mac1 = slice(payload, IDX.MAC_1 + 4, 6).toString('hex')
+    const mac2 = slice(payload, IDX.MAC_2 + 4, 6).toString('hex')
     // mac1 = SOFT_AP_IF
     // mac2 = STA_IF
     return {mac1, mac2, payloadType}
   } else if (payloadType === Constants.PAYLOAD_FCFD_TYPE_DATA) {
-    const mac1 = slice(payload, IDX.MAC_1, 6)
-    const mac2 = slice(payload, IDX.MAC_2, 6)
+    const mac1 = slice(payload, IDX.MAC_1, 6).toString('hex')
+    const mac2 = slice(payload, IDX.MAC_2, 6).toString('hex')
     const len = payload[2 + 6 + 6]
     const dataPayload = slice(payload, IDX.DATA_PAYLOAD, len)
     return {len, mac1, mac2, data: dataPayload, payloadType}

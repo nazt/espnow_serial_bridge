@@ -97,8 +97,8 @@ describe('src/utils.js', () => {
     it('should parse payload wrapper correctly', () => {
       const result = Utils.parsePayload(validBuffer)
       expect(result).toMatchObject({
-        mac1: Buffer.from(mac1),
-        mac2: Buffer.from(mac2),
+        mac1: Buffer.from(mac1).toString('hex'),
+        mac2: Buffer.from(mac2).toString('hex'),
         data: Buffer.from(dataBytes),
         len: dataBytes.length
       })
