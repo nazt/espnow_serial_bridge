@@ -7,7 +7,7 @@ const chalk = require('chalk')
 const mqtt = require('mqtt')
 const client = mqtt.connect(`mqtt://${CONFIG.MQTT.HOST}`)
 const moment = require('moment-timezone')
-const _ = require('underscore')
+// const _ = require('underscore')
 
 client.on('connect', function () {
   console.log(`mqtt connected being subscribed to ${CONFIG.MQTT.SUB_TOPIC}`)
@@ -15,7 +15,6 @@ client.on('connect', function () {
 })
 
 client.on('packetsend', function (packet) {
-  // console.log(`packetsend`, packet);
   if (packet.cmd === 'publish') {
     console.log(`published to ${chalk.green(packet.topic)}`)
   } else if (packet.cmd === 'subscribe') {
@@ -28,10 +27,15 @@ client.on('message', function (topic, message) {
     const payload = Message.getPayloadByStrip0D0A(message)
     if (payload !== null) {
       const parsedResult = Message.parsePayload(payload)
-      const parsedData = Message.parseDataPayload(parsedResult.data)
-      console.log(` message = `, message, '\r\n', `payload = `, payload)
-      console.log(` parsedResult = `, parsedResult)
-      console.log(` parsedData = `, parsedData)
+      // console.log(` message = `, message, '\r\n', `payload = `, payload)
+      console.log(parsedResult)
+
+      if (parsedResult.payloadType === Message.Constants.PAYLOAD_FCFD_TYPE_DATA) {
+        const parsedData = Message.parseDataPayload(parsedResult.data, Message.getPayloadType(message))
+        console.log(` parsedData = `, parsedData)
+      }
+      // const {type, val1, val2, val3, batt, name} =
+      // console.log(`${type} ${name} ${val1} ${val2} ${val3} ${batt}`)
       // let serializedObjectJsonString = JSON.stringify(statusObject)
       // // eslint-disable-next-line no-unused-vars
       // let pubTopics = [
@@ -47,7 +51,7 @@ client.on('message', function (topic, message) {
     console.log('================')
     console.log('================')
     console.log(message.length)
-    console.log('invalid checksum')
+    console.log('invalid packet header.')
     console.log('================')
     console.log('================')
   }

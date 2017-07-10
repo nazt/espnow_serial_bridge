@@ -33,6 +33,7 @@ describe('src/utils.js', () => {
       [hexFromChar('n'), hexFromChar('a'), hexFromChar('t'), 48, 48, 49] /* name */
     ]
 
+    // create dataBytes and add checksum
     dataBytes = [...[0xff, 0xfa], ...type, ...field1, ...field2, ...field3, ...battery, ...nameLen, ...name]
     dataBytes.push(Utils.calculateChecksum(Buffer.from(dataBytes)))
 
@@ -48,6 +49,7 @@ describe('src/utils.js', () => {
     invalidStartBytesBuffer = Buffer.from(validBuffer)
     invalidEndBytesBuffer = Buffer.from(validBuffer)
 
+    // invalid header
     invalidStartBytesBuffer[0] = 0x0f
     invalidStartBytesBuffer[1] = 0x0f
 
@@ -83,6 +85,15 @@ describe('src/utils.js', () => {
   })
 
   describe('payload parser', () => {
+    it('can get payload type correctly', () => {
+      let packetPayloadFCFD = Buffer.from([...[0xfc, 0xfd], ...[0xff, 0xff, 0xff, 0xff], ...[0x0d, 0x0a]])
+      let packetPayloadFAFB = Buffer.from([...[0xfa, 0xfb], ...[0xff, 0xff, 0xff, 0xff], ...[0x0d, 0x0a]])
+      let packetPayloadInvalid = Buffer.from([...[0xff, 0xff], ...[0xff, 0xff, 0xff, 0xff], ...[0x0d, 0x0a]])
+      expect(Utils.getPayloadType(packetPayloadFCFD)).toEqual(Utils.Constants.PAYLOAD_FCFD_TYPE_DATA)
+      expect(Utils.getPayloadType(packetPayloadFAFB)).toEqual(Utils.Constants.PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION)
+      expect(Utils.getPayloadType(packetPayloadInvalid)).toEqual(Utils.Constants.PAYLOAD_TYPE_UNKNOWN)
+    })
+
     it('should parse payload wrapper correctly', () => {
       const result = Utils.parsePayload(validBuffer)
       expect(result).toMatchObject({
@@ -95,11 +106,11 @@ describe('src/utils.js', () => {
       console.log(`result = `, result)
     })
 
-    it('should parse data payload correctly', () => {
+    test('parse payload type FCFD_TYPE_DATA', () => {
+      // ff fa ff ff ff ff 1a fe 34 db 3b 98 18 fe 34 db 3b 98 07
       const payload = Utils.parsePayload(validBuffer)
       const dataPayload = payload.data
-      const result = Utils.parseDataPayload(dataPayload)
-      console.log(result)
+      const result = Utils.parseDataPayload(dataPayload, Utils.Constants.PAYLOAD_FCFD_TYPE_DATA)
 
       expect(result).toMatchObject({
         val1: 3200,
@@ -110,7 +121,6 @@ describe('src/utils.js', () => {
       })
     })
   })
-
   describe('checksum function', () => {
     it('should checksum correct', () => {
       const data = Utils.slice(validBuffer, 0, validBuffer.length - 2)
