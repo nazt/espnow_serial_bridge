@@ -27,28 +27,31 @@ client.on('message', function (topic, message) {
     const payload = Message.getPayloadByStrip0D0A(message)
     if (payload !== null) {
       const parsedResult = Message.parsePayload(payload)
+      let pubTopics = []
+      let mac1 = parsedResult.mac1
+      let mac2 = parsedResult.mac2
       if (parsedResult.payloadType === Message.Constants.PAYLOAD_FCFD_TYPE_DATA) {
         const parsedData = Message.parseDataPayload(parsedResult.data, Message.getPayloadType(message))
+        delete parsedResult.payloadType
         console.log(` parsedData = `, parsedData)
-        /*
-        const {type, val1, val2, val3, batt, name} =
-          console.log(`${type} ${name} ${val1} ${val2} ${val3} ${batt}`)
-        let serializedObjectJsonString = JSON.stringify(statusObject)
+        console.log(` parsedResult = `, parsedResult)
+        // console.log(`${type} ${name} ${val1} ${val2} ${val3} ${batt}`)
+        let serializedObjectJsonString = JSON.stringify(parsedData)
+        // `${CONFIG.MQTT.PUB_PREFIX}/raw/${mac1String}/${mac2String}/status`,
         // eslint-disable-next-line no-unused-vars
-        let pubTopics = [
-          `${CONFIG.MQTT.PUB_PREFIX}/${mac1String}/${mac2String}/status`,
-          `${CONFIG.MQTT.PUB_PREFIX}/raw/${mac1String}/${mac2String}/status`,
-          `${CONFIG.MQTT.PUB_PREFIX}/${mac1String}/${name.toString()}/status`
-        ].forEach((topic, idx) => {
+        pubTopics = [
+          `${CONFIG.MQTT.PUB_PREFIX}/${mac1}/${mac2}/status`,
+          `${CONFIG.MQTT.PUB_PREFIX}/${mac1}/${parsedData.name}/status`
+        ]
+        pubTopics.forEach((topic, idx) => {
           client.publish(topic, serializedObjectJsonString, {retain: false})
         })
-        */
+        console.log(pubTopics)
       } else if (parsedResult.payloadType === Message.Constants.PAYLOAD_FAFB_TYPE_DEVICE_REGISTRATION) {
-        let mac1 = parsedResult.mac1
         delete parsedResult.payloadType
         parsedResult.time = new Date().getTime()
         let serializedDevice = JSON.stringify(parsedResult)
-        let pubTopics = [`${CONFIG.MQTT.PUB_PREFIX}/${mac1}/command`]
+        pubTopics = [`${CONFIG.MQTT.PUB_PREFIX}/${mac1}/command`]
         pubTopics.forEach((topic, idx) => {
           client.publish(topic, serializedDevice, {retain: false})
         })
