@@ -22,9 +22,7 @@ export let checksum = (message) => {
 }
 
 /*
- * valid is
- *    startwith 0xfc, 0xfd
- *    endwith 0x0d 0x0a
+ * valid packet is [0xfc, 0xfd, ...packetData, 0x0d, 0x0a]
  */
 export let isValidInComingMessage = (message) => {
   const msgLength = message.length

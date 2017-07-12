@@ -27,21 +27,17 @@ client.on('message', function (topic, message) {
     const payload = Message.getPayloadByStrip0D0A(message)
     if (payload !== null) {
       const parsedResult = Message.parsePayload(payload)
-      let pubTopics = []
-      let mac1 = parsedResult.mac1
-      let mac2 = parsedResult.mac2
+      let [pubTopics, mac1, mac2] = [ [], parsedResult.mac1, parsedResult.mac2 ]
       if (parsedResult.payloadType === Message.Constants.PAYLOAD_FCFD_TYPE_DATA) {
         const parsedData = Message.parseDataPayload(parsedResult.data, Message.getPayloadType(message))
         delete parsedResult.payloadType
         console.log(` parsedData = `, parsedData)
         console.log(` parsedResult = `, parsedResult)
-        // console.log(`${type} ${name} ${val1} ${val2} ${val3} ${batt}`)
         let serializedObjectJsonString = JSON.stringify(parsedData)
-        // `${CONFIG.MQTT.PUB_PREFIX}/raw/${mac1String}/${mac2String}/status`,
-        // eslint-disable-next-line no-unused-vars
         pubTopics = [
           `${CONFIG.MQTT.PUB_PREFIX}/${mac1}/${mac2}/status`,
-          `${CONFIG.MQTT.PUB_PREFIX}/${mac1}/${parsedData.name}/status`
+          `${CONFIG.MQTT.PUB_PREFIX}/${mac1}/${parsedData.name}/status`,
+          `${CONFIG.MQTT.PUB_PREFIX}/raw/${mac1}/${mac2}/status`
         ]
         pubTopics.forEach((topic, idx) => {
           client.publish(topic, serializedObjectJsonString, {retain: false})
