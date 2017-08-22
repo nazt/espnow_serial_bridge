@@ -7,8 +7,19 @@ class CMMC_Blink
 {
   public:
 
-    CMMC_Blink init() {
-      this->_ticker = new Ticker();
+    typedef enum {
+      BLINK_TYPE_TICKER = 1,
+      BLINK_TYPE_INTERVAL,
+    } blink_t;
+
+    static const blink_t TYPE_TICKER = BLINK_TYPE_TICKER;
+    static const blink_t TYPE_INTERVAL = BLINK_TYPE_INTERVAL;
+
+
+    CMMC_Blink init(blink_t type = BLINK_TYPE_TICKER) {
+      if (type == BLINK_TYPE_TICKER) {
+        this->_ticker = new Ticker;
+      }
       _initialized = true;
       return *this;
     }
@@ -18,6 +29,15 @@ class CMMC_Blink
       digitalWrite(_ledPin, LOW);
       _ledPin = pin;
     }
+
+    CMMC_Blink(blink_t type = BLINK_TYPE_TICKER) {
+      _type = type;
+    };
+
+    CMMC_Blink(Ticker *ticker) {
+      _initialized = true;
+      this->_ticker = ticker;
+    };
 
     void blink(int ms, uint8_t pin) {
       this->setPin(pin);
@@ -43,6 +63,7 @@ class CMMC_Blink
   private:
     unsigned int _ledPin = 254;
     Ticker *_ticker;
+    blink_t  _type;
     bool _initialized = false;
 
 };

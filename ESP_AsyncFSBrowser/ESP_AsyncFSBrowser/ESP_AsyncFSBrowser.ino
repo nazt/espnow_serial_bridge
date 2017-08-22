@@ -50,17 +50,15 @@ int runMode = MODE_ESPNOW;
 uint32_t delayMS = 100;
 DHT dht(12, DHTTYPE);
 
-const char* ssid = "belkin.636";
-const char* password = "3eb7e66b";
-const char * hostName = "esp-async";
-const char* http_username = "admin";
-const char* http_password = "admin";
+String ssid = "belkin.636";
+String password = "3eb7e66b";
+const char* hostName = "cmmc-";
+String http_username = "admin";
+String http_password = "admin";
 
 // ESPNOW
-uint8_t master_mac[6];
-uint8_t slave_mac[6];
+// uint8_t toMasterMac[6];
 
-uint32_t dataHasBeenSentAtMillis;
 
 // SKETCH BEGIN
 AsyncWebServer server(80);
@@ -68,65 +66,9 @@ AsyncWebSocket ws("/ws");
 AsyncEventSource events("/events");
 CMMC_Blink *blinker;
 
-uint32_t espNowSentSuccessCounter = 0;
-uint32_t espNowSentFailedCounter = 0;
 Ticker ticker;
 bool longPressed = false;
 #include "webserver.h"
-bool espNowSentFlagBeChangedInCallback = false;
-uint8_t espNowRetries = 1;
-
-#define MAX_ESPNOW_RETRIES 30
-uint32_t DEEP_SLEEP_S = 5;
-
-#define ESPNOW_RETRY_DELAY 30
-void initUserEspNow() {
-    if (esp_now_init() == 0) {
-        CMMC_DEBUG_PRINTLN("init");
-    } else {
-        CMMC_DEBUG_PRINTLN("init failed");
-        ESP.restart();
-        return;
-    }
-
-    CMMC_DEBUG_PRINTLN("SET ROLE SLAVE");
-    esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
-    static uint8_t recv_counter = 0;
-    esp_now_register_recv_cb([](uint8_t * macaddr, uint8_t * data, uint8_t len) {
-        recv_counter++;
-        // CMMC_DEBUG_PRINTLN("recv_cb");
-        // CMMC_DEBUG_PRINT("mac address: ");
-        // printMacAddress(macaddr);
-        // digitalWrite(LED_BUILTIN, data[0]);
-        CMMC_DEBUG_PRINT("data: ");
-        for (int i = 0; i < len; i++) {
-            CMMC_DEBUG_PRINT(" 0x");
-            CMMC_DEBUG_PRINT(data[i], HEX);
-        }
-        Serial.printf("\r\n");
-        goSleep(60*data[0]);
-    });
-
-    esp_now_register_send_cb([](uint8_t * macaddr, uint8_t status) {
-        CMMC_DEBUG_PRINT(millis());
-        CMMC_DEBUG_PRINT("send to mac addr: ");
-        printMacAddress(macaddr);
-        if (status == 0) {
-            espNowSentFlagBeChangedInCallback = false;
-            espNowSentSuccessCounter++;
-            CMMC_DEBUG_PRINTF("... send_cb OK. [%lu/%lu]\r\n",
-            espNowSentSuccessCounter,
-            espNowSentSuccessCounter + espNowSentFailedCounter);
-        } else {
-            espNowSentFlagBeChangedInCallback = true;
-            espNowSentFailedCounter++;
-
-            CMMC_DEBUG_PRINTF("... send_cb FAILED. [%lu/%lu]\r\n",
-              espNowSentSuccessCounter,
-              espNowSentSuccessCounter + espNowSentFailedCounter);
-        }
-    });
-};
 
 void initUserSensor() {
     // Initialize device.
@@ -151,57 +93,73 @@ void initUserSensor() {
 
 void initGpio() {
     pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(13, INPUT_PULLUP);
     digitalWrite(LED_BUILTIN, HIGH);
-    blinker = new CMMC_Blink;
+    pinMode(13, INPUT_PULLUP);
+    blinker = new CMMC_Blink();
     blinker->init();
 }
 
-void printAndStoreEspNowMacInfo() {
-    uint8_t macaddr[6];
-    Serial.println("====================");
-    Serial.println("    MODE = ESPNOW   ");
-    Serial.println("====================");
-    WiFi.disconnect();
-    Serial.println("Initializing ESPNOW...");
-    CMMC_DEBUG_PRINTLN("Initializing... SLAVE");
-    WiFi.mode(WIFI_AP_STA);
-    wifi_get_macaddr(STATION_IF, macaddr);
-    CMMC_DEBUG_PRINT("[master] mac address (STATION_IF): ");
-    printMacAddress(macaddr);
-
-    wifi_get_macaddr(SOFTAP_IF, macaddr);
-    CMMC_DEBUG_PRINTLN("[slave] mac address (SOFTAP_IF): ");
-    printMacAddress(macaddr);
-    memcpy(slave_mac, macaddr, 6);
+void waitConfigSignal(uint8_t gpio, bool* longpressed) {
+    Serial.println("HELLO...");
+    unsigned long _c = millis();
+    while(digitalRead(gpio) == LOW) {
+      delay(10);
+      // Serial.println("waiting....");
+      // Serial.println(millis() - _c);
+      if((millis() - _c) >= 1000L) {
+        *longpressed = true;
+        Serial.println("Release to take an effect.");
+        blinker->blink(50, LED_BUILTIN);
+        while(digitalRead(gpio) == LOW) {
+          Serial.println("RELEASE ME..!");
+          delay(1000);
+        }
+        blinker->detach();
+        wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+        // blinker->detach();
+        // blinker->blink(500, LED_BUILTIN);
+      }
+      else {
+        *longpressed = false;
+      }
+    }
+    // Serial.println("/NORMAL");
 }
 
 void startModeConfig() {
     Serial.println("====================");
     Serial.println("   MODE = CONFIG    ");
     Serial.println("====================");
+    String apName = String(hostName) + String(ESP.getChipId());
+    Serial.printf("ApName = %s \r\n", apName.c_str());
     WiFi.hostname(hostName);
+    WiFi.disconnect();
+    delay(20);
     WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(hostName);
-    WiFi.begin(ssid, password);
-    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-        Serial.printf("STA: Failed!\n");
-        WiFi.disconnect(false);
-        delay(1000);
-        WiFi.begin(ssid, password);
-    }
+    delay(20);
+    Serial.println("Starting softAP..");
+    // const char *apPass_cstr = String(ESP.getChipId()).c_str();
+    // Serial.println(String(apPass_cstr));
+    WiFi.softAP(apName.c_str(), apName.c_str());
+    // WiFi.begin(ssid.c_str(), password.c_str());
+    // if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    //     Serial.printf("STA: Failed!\n");
+    //     delay(1000);
+    //     WiFi.disconnect(false);
+    //     WiFi.begin(ssid.c_str(), password.c_str());
+    // }
 }
 
 void checkBootMode() {
     Serial.println("Wating configuration pin..");
-    _wait_config_signal(13,&longPressed);
+    waitConfigSignal(13, &longPressed);
     Serial.println("...Done");
     if (longPressed) {
         runMode = MODE_WEBSERVER;
         startModeConfig();
         setupWebServer();
     } else {
-        printAndStoreEspNowMacInfo();
+        // printAndStoreEspNowMacInfo();
     }
 }
 
@@ -212,11 +170,13 @@ void setup() {
     WiFi.disconnect();
     delay(100);
     initGpio();
+    checkBootMode();
     initUserSensor();
-    initUserEspNow();
     setupOTA();
-    loadConfig(master_mac);
-    // initBattery();
+    char myName[30];
+    bzero(myName, 0);
+    loadConfig(myName);
+    Serial.printf("myName = %s\r\n", myName);
 }
 
 void goSleep(uint32_t deepSleepS) {
@@ -224,72 +184,10 @@ void goSleep(uint32_t deepSleepS) {
     ESP.deepSleep(1000000 * deepSleepS);
 }
 
-void sendDataToMaster(uint8_t * message_ptr, size_t msg_size) {
-    // transmit
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-    esp_now_send(master_mac, message_ptr, msg_size);
-    delay(10);
-
-    // retransmitt when failed
-    while (espNowSentFlagBeChangedInCallback) {
-        delay(ESPNOW_RETRY_DELAY);
-        // digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        esp_now_send(master_mac, message_ptr, msg_size);
-        espNowRetries = espNowRetries + 1;
-        // sleep after reach max retries.
-        if (espNowRetries > MAX_ESPNOW_RETRIES) {
-            goSleep(DEEP_SLEEP_S);
-        }
-    };
-}
-
 bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
   *temp = (uint32_t) dht.readTemperature()*100;
   *humid = (uint32_t) dht.readHumidity()*100;
 }
-
-void addDataField(uint8_t *message, uint32_t field1, uint32_t field2, uint32_t field3) {
-    uint32_t battery = ESP.getVcc();
-    message[0] = 0xff;
-    message[1] = 0xfa;
-
-    message[2] = 0x01;
-    message[3] = 0x02;
-    message[4] = 0x03;
-    message[5] = 0x01;
-
-    memcpy(&message[6], (const void *)&field1, 4);
-    memcpy(&message[10], (const void *)&field2, 4);
-    memcpy(&message[14], (const void *)&field3, 4);
-    memcpy(&message[18], (const void *)&battery, 4);
-    message[22] = strlen(deviceName);
-    memcpy(&message[23], deviceName, strlen(deviceName));
-
-    Serial.println("==========================");
-    Serial.println("       print data         ");
-    Serial.println("==========================");
-    byte sum = 0;
-    for (size_t i = 0; i < MESSAGE_SIZE-1; i++) {
-      Serial.printf("%02x", message[i]);
-      sum ^= message[i];
-      if ((i+1) % 4 == 0) {
-        Serial.println();
-      }
-    }
-
-    message[MESSAGE_SIZE-1] = sum;
-
-    Serial.println();
-    Serial.println("==========================");
-    Serial.printf("calculated sum = %02x \r\n", sum);
-    Serial.printf(".....check sum = %02x \r\n", message[MESSAGE_SIZE-1]);
-
-    Serial.printf("field1: %02x - %lu\r\n", field1, field1);
-    Serial.printf("field2: %02x - %lu\r\n", field2, field2);
-    Serial.printf("field3:  %d \r\n", field3);
-    Serial.printf("batt: %d \r\n", battery);
-}
-
 
 void loop() {
     bzero(message, sizeof(message));
@@ -297,26 +195,7 @@ void loop() {
     if (runMode == MODE_WEBSERVER) {
       return;
     } else {
-      uint32_t temperature_uint32;
-      uint32_t humidity_uint32;
-      uint32_t cmdistance = 999; // in cm
       // write reference
-      readDHTSensor(&temperature_uint32, &humidity_uint32);
-      addDataField(message, temperature_uint32, humidity_uint32, cmdistance);
-
-      sendDataToMaster(message, sizeof(message));
-
-      // wait for a command message.
-      dataHasBeenSentAtMillis = millis();
-      while(true) {
-        delay(1000);
-        Serial.println("Waiting a command message...");
-        if (millis() > (dataHasBeenSentAtMillis + 500)) {
-          Serial.println("TIMEOUT!!!!");
-          Serial.println("go to bed!");
-          Serial.println("....BYE");
-          goSleep(DEEP_SLEEP_S);
-        }
-      }
+      // readDHTSensor(&temperature_uint32, &humidity_uint32);
     }
 }

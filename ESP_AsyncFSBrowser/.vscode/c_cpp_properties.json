@@ -7,6 +7,7 @@
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/tools/sdk/lwip/include",
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/cores/esp8266",
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/variants/espresso_lite_v2",
+                "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/ESP_AsyncFSBrowser",
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266WiFi/src",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/ESPAsyncTCP_ID305/src",
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/Hash/src",
@@ -15,11 +16,10 @@
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/Adafruit Unified Sensor_ID31",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/DHT sensor library_ID19",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/Ultrasonic_ID1507/src",
+                "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/Ticker",
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266mDNS",
                 "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/ArduinoOTA",
-                "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/Ticker",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/lib/CMMC_Blink",
-                "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/ESP_AsyncFSBrowser",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/lib/CMMC_Blink",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/Adafruit Unified Sensor_ID31",
                 "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/ArduinoJson_ID64/src",
@@ -74,6 +74,7 @@
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/tools/sdk/lwip/include",
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/cores/esp8266",
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/variants/espresso_lite_v2",
+                    "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/ESP_AsyncFSBrowser",
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266WiFi/src",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/ESPAsyncTCP_ID305/src",
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/Hash/src",
@@ -82,11 +83,10 @@
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/Adafruit Unified Sensor_ID31",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/DHT sensor library_ID19",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/Ultrasonic_ID1507/src",
+                    "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/Ticker",
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/ESP8266mDNS",
                     "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/ArduinoOTA",
-                    "/Users/nat/.platformio/packages/framework-arduinoespressif8266/libraries/Ticker",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/lib/CMMC_Blink",
-                    "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/ESP_AsyncFSBrowser",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/lib/CMMC_Blink",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/Adafruit Unified Sensor_ID31",
                     "/Users/nat/espnow_serial_bridge/ESP_AsyncFSBrowser/.piolibdeps/ArduinoJson_ID64/src",
@@ -131,7 +131,8 @@
                     "/Users/nat/.platformio/packages/toolchain-xtensa/lib/gcc/xtensa-lx106-elf/4.8.2/include",
                     "/Users/nat/.platformio/packages/toolchain-xtensa/lib/gcc/xtensa-lx106-elf/4.8.2/include-fixed",
                     "/Users/nat/.platformio/packages/tool-unity",
-                    ""
+                    "",
+                    "${workspaceRoot}"
                 ]
             },
             "defines": [
@@ -140,12 +141,14 @@
                 "F_CPU=80000000L",
                 "__ets__",
                 "ICACHE_FLASH",
-                "PLATFORMIO=30400",
+                "PLATFORMIO=30500",
                 "ESP8266",
                 "ARDUINO_ARCH_ESP8266",
                 "ARDUINO_ESP8266_ESPRESSO_LITE_V2",
                 ""
-            ]
+            ],
+            "intelliSenseMode": "clang-x64"
         }
-    ]
+    ],
+    "version": 2
 }

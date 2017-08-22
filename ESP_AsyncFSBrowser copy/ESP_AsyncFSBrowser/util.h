@@ -3,7 +3,6 @@
 #include <CMMC_Blink.hpp>
 
 
-#define LED_BUILTIN 2
 extern CMMC_Blink *blinker;
 // goto sleep when no events after this time.
 const int idleTime = 10;
@@ -41,6 +40,24 @@ void printMacAddress(uint8_t* macaddr) {
   Serial.println("};");
 }
 
+void _wait_config_signal(uint8_t gpio, bool* longpressed) {
+    unsigned long _c = millis();
+    while(digitalRead(gpio) == LOW) {
+      if((millis() - _c) >= 1000) {
+        *longpressed = true;
+        blinker->blink(500, LED_BUILTIN);
+        Serial.println("Release to take an effect.");
+        while(digitalRead(gpio) == LOW) {
+          yield();
+        }
+      }
+      else {
+        *longpressed = false;
+        yield();
+      }
+    }
+    // Serial.println("/NORMAL");
+}
 
 void swap(int &a, int &b)
 {

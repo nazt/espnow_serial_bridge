@@ -29,23 +29,15 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
       }
 
-      Serial.printf("MESSAGE => %s\n", msg.c_str());
+      Serial.printf("MESSAGE => %s\n",msg.c_str());
       String header = msg.substring(0, 7);
       String value = msg.substring(7);
       String macStr;
       bool validMessage = 0;
-      uint16_t len = value.length();
-      if (header == "myName=") {
-        Serial.printf("myName = %s\r\n", value.c_str());
-        Serial.printf("last char = %c \r\n", value[len-1]);
-        if (value[len-1] == '$') {
-          Serial.println(value.substring(0, len-1));
-          macStr = value;
-          validMessage = true;
-          client->text(String("OK Bye!"));
-          saveConfig(value.substring(0, len-1));
-          ESP.reset();
-        }
+      if (header == "MASTER:" && value.length() == 12) {
+        macStr = value;
+        validMessage = true;
+        saveConfig(macStr);
       }
       else {
         Serial.print("INVALID:");
@@ -105,7 +97,7 @@ void setupWebServer() {
       client->send("hello!",NULL,millis(),1000);
     });
     server.addHandler(&events);
-    server.addHandler(new SPIFFSEditor(http_username.c_str() ,http_password.c_str()));
+    server.addHandler(new SPIFFSEditor(http_username,http_password));
     server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(200, "text/plain", String(ESP.getFreeHeap()));
     });

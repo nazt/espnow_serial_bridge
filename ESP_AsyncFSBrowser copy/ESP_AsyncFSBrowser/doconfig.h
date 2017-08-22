@@ -4,12 +4,13 @@
 extern void printMacAddress(uint8_t* macaddr);
 
 char deviceName[20];
+extern uint32_t DEEP_SLEEP_S;
 
-bool saveConfig(String myName) {
+
+bool saveConfig(String mac) {
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
-  json["name"] = myName;
-  json["mac"] = "0a0b0c0d0d0d";
+  json["mac"] = mac;
 
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
@@ -21,7 +22,7 @@ bool saveConfig(String myName) {
   return true;
 }
 
-bool loadConfig(char* myName) {
+bool loadConfig(uint8_t *master_mac) {
   File configFile = SPIFFS.open("/config.json", "r");
   if (!configFile) {
     Serial.println("Failed to open config file");
@@ -55,17 +56,16 @@ bool loadConfig(char* myName) {
   uint32_t sleep = json["sleepS"];
 
   strcpy(deviceName, name);
-  strcpy(myName, name);
+  DEEP_SLEEP_S = sleep;
 
+  String macStr = String(mac);
+  for (size_t i = 0; i < 12; i+=2) {
+    String mac = macStr.substring(i, i+2);
+    byte b = strtoul(mac.c_str(), 0, 16);
+    master_mac[i/2] = b;
+  }
 
-  // String macStr = String(mac);
-  // for (size_t i = 0; i < 12; i+=2) {
-  //   String mac = macStr.substring(i, i+2);
-  //   byte b = strtoul(mac.c_str(), 0, 16);
-  //   master_mac[i/2] = b;
-  // }
-  //
-  // printMacAddress(master_mac);
+  printMacAddress(master_mac);
 
   return true;
 }
