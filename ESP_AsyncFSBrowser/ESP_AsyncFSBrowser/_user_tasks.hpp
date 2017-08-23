@@ -6,6 +6,7 @@ extern DHT dht;
 extern painlessMesh mesh;
 extern size_t logServerId;
 extern char myName[];
+extern int dhtType;
 
 uint32_t blinkAtMs;
 
@@ -34,7 +35,7 @@ void userTaskReadSensor() {
     data["type"] = "sensor";
     data["myName"] = String(myName) + String("-")+ mesh.getNodeId();
     data["sensor"] = "dht";
-    data["sensorType"] = DHTTYPE;
+    data["sensorType"] = dhtType;
     data["heap"] = ESP.getFreeHeap();
     data["millis"] = millis();
 

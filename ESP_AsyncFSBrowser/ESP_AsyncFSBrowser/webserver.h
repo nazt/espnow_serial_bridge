@@ -33,13 +33,21 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       String retText = "EMPTY";
       bool validMessage = 0;
       if (msg.startsWith("dhtType=")) {
-        validMessage = 1;
         String value = msg.substring(8);
+        if (value == "11" || value == "22") {
+          validMessage = 1;
+          dhtType = value.toInt();
+          saveConfig();
+          retText = String("OK! dhtType="+ value);
+        }
+        else {
+        }
       }
       else if (msg.startsWith("myName=")) {
         validMessage = 1;
         String value = msg.substring(7);
-        saveConfig(value);
+        strcpy(myName, value.c_str());
+        saveConfig();
         retText = String("OK! myName="+ value);
       }
       else if (msg == "$REBOOT") {

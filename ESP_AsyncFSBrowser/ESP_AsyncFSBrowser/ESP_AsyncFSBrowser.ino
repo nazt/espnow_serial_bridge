@@ -17,15 +17,14 @@
 #define   MESH_PORT       5555
 
 char myName[72];
-#define LED_BUILTIN 14
+int dhtType = 22;
+#define LED_BUILTIN 2
 #define BUTTONPIN   0
-#define DHTTYPE     DHT11  // DHT 22  (AM2302), AM2321
 #define DHTPIN      12
 
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht(DHTPIN, dhtType);
 painlessMesh  mesh;
 size_t logServerId = 0;
-
 #include "_user_tasks.hpp"
 // Send message to the logServer every 10 seconds
 bool userReadSensorFlag = false;
@@ -71,22 +70,16 @@ extern "C" {
 }
 
 extern char deviceName[];
-
 #define MODE_WEBSERVER 1
 #define MODE_MESH    2
 
 int runMode = MODE_MESH;
-
 
 String ssid = "belkin.636";
 String password = "3eb7e66b";
 const char* hostName = "cmmc-";
 String http_username = "admin";
 String http_password = "admin";
-
-// ESPNOW
-// uint8_t toMasterMac[6];
-
 
 // SKETCH BEGIN
 AsyncWebServer server(80);
@@ -203,8 +196,9 @@ void setup() {
     initUserSensor();
     setupOTA();
     bzero(myName, 0);
-    loadConfig(myName);
-    Serial.printf("myName = %s\r\n", myName);
+    loadConfig(myName, &dhtType);
+    // Serial.printf("myName = %s\r\n", myName);
+    delay(100);
 }
 
 void goSleep(uint32_t deepSleepS) {
@@ -262,7 +256,6 @@ void loop() {
           digitalWrite(LED_BUILTIN, LOW);
           dirty = false;
         }
-        else { }
         mesh.update();
       }
     }

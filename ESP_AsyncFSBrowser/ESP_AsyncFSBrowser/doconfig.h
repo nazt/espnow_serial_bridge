@@ -1,15 +1,17 @@
-#include <FS.h>
-#include <ArduinoJson.h>
+
 #include <Arduino.h>
+#include <ArduinoJson.h>
+#include <FS.h>
 extern void printMacAddress(uint8_t* macaddr);
+extern int dhtType;
+extern char myName[];
 
-char deviceName[64];
-
-bool saveConfig(String myName) {
+bool saveConfig() {
   StaticJsonBuffer<200> jsonBuffer;
   JsonObject& json = jsonBuffer.createObject();
   json["name"] = myName;
   json["mac"] = "0a0b0c0d0d0d";
+  json["dhtType"] = dhtType;
 
   File configFile = SPIFFS.open("/config.json", "w");
   if (!configFile) {
@@ -21,7 +23,7 @@ bool saveConfig(String myName) {
   return true;
 }
 
-bool loadConfig(char* myName) {
+bool loadConfig(char *myName, int *dhtType) {
   File configFile = SPIFFS.open("/config.json", "r");
   if (!configFile) {
     Serial.println("Failed to open config file");
@@ -50,12 +52,24 @@ bool loadConfig(char* myName) {
     return false;
   }
 
-  const char* mac = json["mac"];
-  const char* name = json["name"];
   uint32_t sleep = json["sleepS"];
 
-  strcpy(deviceName, name);
-  strcpy(myName, name);
+  if (json.containsKey("mac")) {
+    const char* mac = json["mac"];
+    Serial.printf("Loaded mac %s\r\n", mac);
+  }
+
+  if (json.containsKey("dhtType")) {
+    *dhtType = json["dhtType"].as<int>();
+    Serial.printf("Loaded dhtType %d\r\n", *dhtType);
+  }
+
+  if (json.containsKey("name")) {
+    const char* name = json["name"];
+    strcpy(myName, name);
+    Serial.printf("Loaded myName = %s\r\n", myName);
+  }
+
 
 
   // String macStr = String(mac);
