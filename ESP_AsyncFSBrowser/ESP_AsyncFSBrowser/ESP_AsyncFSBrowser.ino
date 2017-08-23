@@ -18,18 +18,10 @@
 
 char myName[72];
 int dhtType = 11;
-// #define LED_BUILTIN 2
+#define LED_BUILTIN 14
 #define BUTTONPIN   0
 #define DHTPIN      12
-// ESPRESSO LITE 1 = FALLING
-// #define INTERRUPT_TYPE  FALLING
-
-// ESPRESSO LITE 2 = RISING
-#define INTERRUPT_TYPE FALLING
-// #ifdef ARDUINO_ESP8266_ESPRESSO_LITE_V2
-//   #define LOW 1
-//   #define HIGH 0
-// #endif
+#define INTERRUPT_TYPE RISING
 
 DHT *dht;
 painlessMesh  mesh;
@@ -178,7 +170,7 @@ void checkBootMode() {
 
 void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(LED_BUILTIN, HIGH);
     delay(50);
     Serial.begin(115200);
     Serial.setDebugOutput(true);
@@ -248,7 +240,7 @@ void loop() {
         }
 
         if (dirty && (millis() - markedTime > 50)) {
-          digitalWrite(LED_BUILTIN, HIGH);
+          digitalWrite(LED_BUILTIN, LOW);
           dirty = false;
         }
         mesh.update();
