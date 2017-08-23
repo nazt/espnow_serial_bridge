@@ -38,7 +38,12 @@ class CMMC_Blink
       this->_ticker->detach();
       auto lambda = []() {
         *state = !*state;
-        digitalWrite(_pin, *state);     // set pin to the opposite state
+        if (*state) {
+          digitalWrite(_pin, HIGH);
+        }
+        else {
+          digitalWrite(_pin, LOW);
+        }
       };
       this->_ticker->attach_ms(ms, lambda);
     }

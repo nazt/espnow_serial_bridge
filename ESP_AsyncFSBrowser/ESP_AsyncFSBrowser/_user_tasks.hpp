@@ -2,7 +2,7 @@
 #include "painlessMesh.h"
 #include <DHT.h>
 
-extern DHT dht;
+extern DHT *dht;
 extern painlessMesh mesh;
 extern size_t logServerId;
 extern char myName[];
@@ -17,9 +17,9 @@ void userTaskReadSensor() {
     JsonObject& data = jsonBuffer.createObject();
     JsonObject& info = jsonBuffer.createObject();
 
-    float h = dht.readHumidity();
+    float h = dht->readHumidity();
     // Read temperature as Celsius (the default)
-    float t = dht.readTemperature();
+    float t = dht->readTemperature();
 
     if (isnan(t) ||  isnan(h)) {
         h = 0;

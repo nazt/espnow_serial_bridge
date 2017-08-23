@@ -55,19 +55,25 @@ bool loadConfig(char *myName, int *dhtType) {
   uint32_t sleep = json["sleepS"];
 
   if (json.containsKey("mac")) {
-    const char* mac = json["mac"];
-    Serial.printf("Loaded mac %s\r\n", mac);
+    // const char* mac = json["mac"];
+    // Serial.printf("Loaded mac %s\r\n", mac);
   }
 
   if (json.containsKey("dhtType")) {
     *dhtType = json["dhtType"].as<int>();
     Serial.printf("Loaded dhtType %d\r\n", *dhtType);
   }
+  else {
+    *dhtType = 11;
+  }
 
   if (json.containsKey("name")) {
     const char* name = json["name"];
     strcpy(myName, name);
     Serial.printf("Loaded myName = %s\r\n", myName);
+  }
+  else {
+    strcpy(myName, "Noname");
   }
 
 
