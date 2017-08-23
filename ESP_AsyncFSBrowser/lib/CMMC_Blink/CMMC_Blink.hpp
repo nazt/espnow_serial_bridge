@@ -9,9 +9,11 @@ class CMMC_Blink
 
     CMMC_Blink init() {
       this->_ticker = new Ticker();
-      _initialized = true;
+      this->state = LOW;
+      this->_initialized = true;
       return *this;
     }
+
 
     void setPin(uint8_t pin) {
       pinMode(_ledPin, OUTPUT);
@@ -32,19 +34,21 @@ class CMMC_Blink
       if (!_initialized) return;
       if (_ledPin == 254) return;
       static int _pin = this->_ledPin;
+      static bool *state = &this->state;
       this->_ticker->detach();
       auto lambda = []() {
-        int state = digitalRead(_pin);  // get the current state of GPIOpin pin
-        digitalWrite(_pin, !state);     // set pin to the opposite state
+        *state = !*state;
+        digitalWrite(_pin, *state);     // set pin to the opposite state
       };
       this->_ticker->attach_ms(ms, lambda);
     }
 
   private:
     unsigned int _ledPin = 254;
-    Ticker *_ticker;
+    bool state;
     bool _initialized = false;
-
+    Ticker *_ticker;
+    // auto *callback;
 };
 
 

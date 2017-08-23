@@ -9,6 +9,46 @@
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
 #include <CMMC_Blink.hpp>
+#include "painlessMesh.h"
+#include "DHT.h"
+
+#define   MESH_PREFIX     "natnatnat"
+#define   MESH_PASSWORD   "tantantan"
+#define   MESH_PORT       5555
+
+char myName[72];
+#define LED_BUILTIN 14
+#define BUTTONPIN   0
+#define DHTTYPE     DHT11  // DHT 22  (AM2302), AM2321
+#define DHTPIN      12
+
+DHT dht(DHTPIN, DHTTYPE);
+painlessMesh  mesh;
+size_t logServerId = 0;
+
+#include "_user_tasks.hpp"
+// Send message to the logServer every 10 seconds
+bool userReadSensorFlag = false;
+Task myLoggingTask(10000, TASK_FOREVER, []() {
+  userReadSensorFlag = true;
+});
+
+
+void receivedCallback( uint32_t from, String &msg ) {
+  Serial.printf("logClient: Received from %u msg=%s\n", from, msg.c_str());
+
+  // Saving logServer
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(msg);
+  if (root.containsKey("topic")) {
+      if (String("logServer").equals(root["topic"].as<String>())) {
+          // check for on: true or false
+          logServerId = root["nodeId"];
+          Serial.printf("logServer detected!!!\n");
+      }
+      Serial.printf("Handled from %u msg=%s\n", from, msg.c_str());
+  }
+}
 
 #define CMMC_DEBUG_SERIAL 1
 #if CMMC_DEBUG_SERIAL
@@ -30,25 +70,13 @@ extern "C" {
   #include <user_interface.h>
 }
 
-#include "DHT.h"
-#include <Ultrasonic.h>
-
-ADC_MODE(ADC_VCC);
-
-extern char deviceName[20];
-
-#define MESSAGE_SIZE 48
-uint8_t message[MESSAGE_SIZE] = {0};
+extern char deviceName[];
 
 #define MODE_WEBSERVER 1
-#define MODE_ESPNOW    2
+#define MODE_MESH    2
 
-int runMode = MODE_ESPNOW;
+int runMode = MODE_MESH;
 
-#define DHTTYPE       DHT22  // DHT 22  (AM2302), AM2321
-#define DHTPIN        12
-uint32_t delayMS = 100;
-DHT dht(12, DHTTYPE);
 
 String ssid = "belkin.636";
 String password = "3eb7e66b";
@@ -94,13 +122,13 @@ void initUserSensor() {
 void initGpio() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
-    pinMode(13, INPUT_PULLUP);
+    pinMode(BUTTONPIN, INPUT_PULLUP);
     blinker = new CMMC_Blink();
     blinker->init();
 }
 
 void waitConfigSignal(uint8_t gpio, bool* longpressed) {
-    Serial.println("HELLO...");
+    Serial.println("Checking.....");
     unsigned long _c = millis();
     while(digitalRead(gpio) == LOW) {
       delay(10);
@@ -108,14 +136,14 @@ void waitConfigSignal(uint8_t gpio, bool* longpressed) {
       // Serial.println(millis() - _c);
       if((millis() - _c) >= 1000L) {
         *longpressed = true;
-        Serial.println("Release to take an effect.");
+        Serial.println("Release the button to enter config mode   .");
         blinker->blink(50, LED_BUILTIN);
         while(digitalRead(gpio) == LOW) {
           Serial.println("RELEASE ME..!");
           delay(1000);
         }
         blinker->detach();
-        wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
+        // wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
         // blinker->detach();
         // blinker->blink(500, LED_BUILTIN);
       }
@@ -152,7 +180,8 @@ void startModeConfig() {
 
 void checkBootMode() {
     Serial.println("Wating configuration pin..");
-    waitConfigSignal(13, &longPressed);
+    delay(2000);
+    waitConfigSignal(BUTTONPIN, &longPressed);
     Serial.println("...Done");
     if (longPressed) {
         runMode = MODE_WEBSERVER;
@@ -173,7 +202,6 @@ void setup() {
     checkBootMode();
     initUserSensor();
     setupOTA();
-    char myName[30];
     bzero(myName, 0);
     loadConfig(myName);
     Serial.printf("myName = %s\r\n", myName);
@@ -189,13 +217,53 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
   *humid = (uint32_t) dht.readHumidity()*100;
 }
 
+bool isSetupMesh = false;
+void setUpMesh() {
+    mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION );  // set before init() so that you can see startup messages
+    mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 9,
+      PHY_MODE_11G, 82, 1, 4);
+    mesh.onReceive(&receivedCallback);
+    // Add the task to the mesh scheduler
+    mesh.scheduler.addTask(myLoggingTask);
+    myLoggingTask.enable();
+    // write reference
+    // readDHTSensor(&temperature_uint32, &humidity_uint32);
+}
+
+
+uint32_t markedTime;
+bool dirty = false;
+
 void loop() {
-    bzero(message, sizeof(message));
-    ArduinoOTA.handle();
+    // ArduinoOTA.handle();
     if (runMode == MODE_WEBSERVER) {
       return;
     } else {
-      // write reference
-      // readDHTSensor(&temperature_uint32, &humidity_uint32);
+      if (!isSetupMesh) {
+        isSetupMesh = true;
+        setUpMesh();
+        blinker->blink(1500, LED_BUILTIN);
+        attachInterrupt(LED_BUILTIN, []() {
+          dirty = true;
+          // Serial.println(String(millis()) + " - GPIO 2 = LOW ");
+          markedTime = millis();
+        } , RISING);
+      } else {
+        if (userReadSensorFlag) {
+          Serial.println("READ USER SENSOR...");
+          Serial.println("READ USER SENSOR...");
+          Serial.println("READ USER SENSOR...");
+          Serial.println("READ USER SENSOR...");
+          userTaskReadSensor();
+          userReadSensorFlag = false;
+        }
+
+        if (dirty && (millis() - markedTime > 50)) {
+          digitalWrite(LED_BUILTIN, LOW);
+          dirty = false;
+        }
+        else { }
+        mesh.update();
+      }
     }
 }

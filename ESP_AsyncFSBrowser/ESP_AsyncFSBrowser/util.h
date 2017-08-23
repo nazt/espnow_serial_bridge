@@ -2,8 +2,6 @@
 #include <Ticker.h>
 #include <CMMC_Blink.hpp>
 
-
-#define LED_BUILTIN 2
 extern CMMC_Blink *blinker;
 // goto sleep when no events after this time.
 const int idleTime = 10;

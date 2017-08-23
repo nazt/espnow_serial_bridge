@@ -3,7 +3,7 @@
 #include <Arduino.h>
 extern void printMacAddress(uint8_t* macaddr);
 
-char deviceName[20];
+char deviceName[64];
 
 bool saveConfig(String myName) {
   StaticJsonBuffer<200> jsonBuffer;

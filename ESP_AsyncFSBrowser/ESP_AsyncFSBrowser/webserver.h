@@ -30,32 +30,37 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
       }
 
       Serial.printf("MESSAGE => %s\n", msg.c_str());
-      String header = msg.substring(0, 7);
-      String value = msg.substring(7);
-      String macStr;
+      String retText = "EMPTY";
       bool validMessage = 0;
-      uint16_t len = value.length();
-      if (header == "myName=") {
-        Serial.printf("myName = %s\r\n", value.c_str());
-        Serial.printf("last char = %c \r\n", value[len-1]);
-        if (value[len-1] == '$') {
-          Serial.println(value.substring(0, len-1));
-          macStr = value;
-          validMessage = true;
-          client->text(String("OK Bye!"));
-          saveConfig(value.substring(0, len-1));
-          ESP.reset();
-        }
+      if (msg.startsWith("dhtType=")) {
+        validMessage = 1;
+        String value = msg.substring(8);
+      }
+      else if (msg.startsWith("myName=")) {
+        validMessage = 1;
+        String value = msg.substring(7);
+        saveConfig(value);
+        retText = String("OK! myName="+ value);
+      }
+      else if (msg == "$REBOOT") {
+        validMessage = 1;
+        retText = String("OK! $REBOOT");
       }
       else {
-        Serial.print("INVALID:");
-        Serial.println(msg);
+        Serial.printf("INVALID: %s \r\n", msg.c_str());
       }
 
       if(info->opcode == WS_TEXT)
         if (validMessage) {
-          // client->text("I got your text message");
-          client->text(macStr);
+          client->text(retText);
+          delay(10);
+          if (retText == "OK! $REBOOT") {
+            client->text("BYE!");
+            WiFi.disconnect();
+            delay(200);
+            ESP.reset();
+          }
+
         }
         else {
           client->text(String("INVALID: ") + msg);
@@ -96,7 +101,7 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
         }
       }
     }
-  }
+    }
 }
 void setupWebServer() {
     ws.onEvent(onWsEvent);
