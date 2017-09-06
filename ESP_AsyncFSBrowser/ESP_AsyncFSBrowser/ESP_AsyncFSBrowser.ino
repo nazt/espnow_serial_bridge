@@ -128,17 +128,54 @@ void startModeConfig() {
     // }
 }
 
+uint8_t master_mac[6];
+uint8_t slave_mac[6];
+void initEspNow() {
+  Serial.println("====================");
+  Serial.println("   MODE = ESPNOW    ");
+  Serial.println("====================");
+  WiFi.disconnect();
+  Serial.println("Initializing ESPNOW...");
+  Serial.println("Initializing... SLAVE");
+  WiFi.mode(WIFI_AP_STA);
+
+  uint8_t macaddr[6];
+  wifi_get_macaddr(STATION_IF, macaddr);
+  Serial.print("[master] mac address (STATION_IF): ");
+  printMacAddress(macaddr);
+
+  wifi_get_macaddr(SOFTAP_IF, macaddr);
+  Serial.println("[slave] mac address (SOFTAP_IF): ");
+  printMacAddress(macaddr);
+  memcpy(slave_mac, macaddr, 6);
+
+  if (esp_now_init() == 0) {
+    Serial.println("init");
+  } else {
+    Serial.println("init failed");
+    ESP.restart();
+    return;
+  }
+  Serial.println("SET ROLE SLAVE");
+  esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+
+}
+
 void checkBootMode() {
     Serial.println("Wating configuration pin..");
     delay(2000);
     waitConfigSignal(BUTTONPIN, &longPressed);
     Serial.println("...Done");
+    digitalWrite(LED_BUILTIN, LOW);
     if (longPressed) {
         runMode = MODE_WEBSERVER;
         startModeConfig();
         setupWebServer();
     } else {
         // printAndStoreEspNowMacInfo();
+        initEspNow();
+        esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
+        uint8_t recv_counter = 0;
     }
 }
 
@@ -156,7 +193,6 @@ void setup() {
     blinker = new CMMC_Blink();
     blinker->init();
     checkBootMode();
-    initUserSensor();
     bzero(myName, 0);
     // Serial.printf("myName = %s\r\n", myName);
     delay(100);
@@ -169,6 +205,7 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
 
 bool isSetupMesh = false;
 void setUpMesh() {
+    initUserSensor();
 }
 
 uint32_t markedTime;
