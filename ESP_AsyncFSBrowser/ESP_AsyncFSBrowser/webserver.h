@@ -112,19 +112,19 @@ void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventT
     }
 }
 void setupWebServer() {
-    ws.onEvent(onWsEvent);
-    server.addHandler(&ws);
-    events.onConnect([](AsyncEventSourceClient *client){
+    ws->onEvent(onWsEvent);
+    server->addHandler(ws);
+    events->onConnect([](AsyncEventSourceClient *client){
       client->send("hello!",NULL,millis(),1000);
     });
-    server.addHandler(&events);
-    server.addHandler(new SPIFFSEditor(http_username.c_str() ,http_password.c_str()));
-    server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
+    server->addHandler(events);
+    server->addHandler(new SPIFFSEditor(http_username.c_str() ,http_password.c_str()));
+    server->on("/heap", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(200, "text/plain", String(ESP.getFreeHeap()));
     });
-    server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
+    server->serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
 
-    server.onNotFound([](AsyncWebServerRequest *request){
+    server->onNotFound([](AsyncWebServerRequest *request){
       Serial.printf("NOT_FOUND: ");
       if(request->method() == HTTP_GET)
         Serial.printf("GET");
@@ -170,20 +170,20 @@ void setupWebServer() {
 
       request->send(404);
     });
-    server.onFileUpload([](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final){
+    server->onFileUpload([](AsyncWebServerRequest *request, const String& filename, size_t index, uint8_t *data, size_t len, bool final){
       if(!index)
         Serial.printf("UploadStart: %s\n", filename.c_str());
       Serial.printf("%s", (const char*)data);
       if(final)
         Serial.printf("UploadEnd: %s (%u)\n", filename.c_str(), index+len);
     });
-    server.onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
+    server->onRequestBody([](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total){
       if(!index)
         Serial.printf("BodyStart: %u\n", total);
       Serial.printf("%s", (const char*)data);
       if(index + len == total)
         Serial.printf("BodyEnd: %u\n", total);
     });
-    server.begin();
-    Serial.println("Starting webserver...");
+    server->begin();
+    Serial.println("Starting webserver-..");
 }

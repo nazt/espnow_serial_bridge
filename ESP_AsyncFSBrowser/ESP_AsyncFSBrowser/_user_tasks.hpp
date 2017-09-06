@@ -13,9 +13,11 @@ uint32_t blinkAtMs;
 
 void userTaskReadSensor() {
     DynamicJsonBuffer jsonBuffer;
+    DynamicJsonBuffer jsonBuffer1;
+    DynamicJsonBuffer jsonBuffer2;
     JsonObject& root = jsonBuffer.createObject();
-    JsonObject& data = jsonBuffer.createObject();
-    JsonObject& info = jsonBuffer.createObject();
+    JsonObject& data = jsonBuffer1.createObject();
+    JsonObject& info = jsonBuffer2.createObject();
 
     float h = dht->readHumidity();
     // Read temperature as Celsius (the default)
@@ -27,12 +29,9 @@ void userTaskReadSensor() {
     }
     else {
       data["temp"] = t;
-      data["temperature_celcius"] = t;
       data["humid"] = h;
-      data["humidity_percent_rh"] = h;
     }
 
-    data["type"] = "sensor";
     data["myName"] = String(myName) + String("-")+ mesh.getNodeId();
     data["sensor"] = "dht";
     data["sensorType"] = dhtType;

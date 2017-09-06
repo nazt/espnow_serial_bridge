@@ -3,7 +3,6 @@
 #include <ESP8266mDNS.h>
 #include <Ticker.h>
 #include <Hash.h>
-#include <ArduinoOTA.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <SPIFFSEditor.h>
@@ -16,7 +15,11 @@
 #define   MESH_PASSWORD   "tantantan"
 #define   MESH_PORT       5555
 
-char myName[72];
+AsyncWebServer *server;
+AsyncWebSocket *ws;
+AsyncEventSource *events;
+
+char myName[15];
 int dhtType = 11;
 #define LED_BUILTIN 14
 #define BUTTONPIN   0
@@ -37,19 +40,18 @@ Task myLoggingTask(10000, TASK_FOREVER, []() {
 void receivedCallback( uint32_t from, String &msg ) {
   Serial.printf("logClient: Received from %u msg=%s\n", from, msg.c_str());
   // Saving logServer
-  // DynamicJsonBuffer jsonBuffer;
-  // JsonObject& root = jsonBuffer.parseObject(msg);
-  // if (root.containsKey("topic")) {
-  //     if (String("logServer").equals(root["topic"].as<String>())) {
-  //         // check for on: true or false
-  //         logServerId = root["nodeId"];
-  //         Serial.printf("logServer detected!!!\n");
-  //     }
-  //     Serial.printf("Handled from %u msg=%s\n", from, msg.c_str());
-  // }
+  DynamicJsonBuffer jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(msg);
+  if (root.containsKey("topic")) {
+      if (String("logServer").equals(root["topic"].as<String>())) {
+          // check for on: true or false
+          logServerId = root["nodeId"];
+          Serial.printf("logServer detected!!!\n");
+      }
+      Serial.printf("Handled from %u msg=%s\n", from, msg.c_str());
+  }
 }
 
-#include "ota.h"
 #include "doconfig.h"
 #include "util.h"
 extern "C" {
@@ -68,10 +70,6 @@ const char* hostName = "cmmc-";
 String http_username = "admin";
 String http_password = "admin";
 
-// SKETCH BEGIN
-AsyncWebServer server(80);
-AsyncWebSocket ws("/ws");
-AsyncEventSource events("/events");
 CMMC_Blink *blinker;
 
 Ticker ticker;
@@ -98,9 +96,6 @@ void initUserSensor() {
     Serial.print("Temperature: ");
     Serial.print(t);
     Serial.print(" *C ");
-}
-
-void initGpio() {
 }
 
 void waitConfigSignal(uint8_t gpio, bool* longpressed) {
@@ -131,6 +126,11 @@ void waitConfigSignal(uint8_t gpio, bool* longpressed) {
 }
 
 void startModeConfig() {
+  // SKETCH BEGIN
+    server = new AsyncWebServer(80);
+    ws = new AsyncWebSocket("/ws");
+    events = new AsyncEventSource("/events");
+
     Serial.println("====================");
     Serial.println("   MODE = CONFIG    ");
     Serial.println("====================");
@@ -183,15 +183,9 @@ void setup() {
     blinker->init();
     checkBootMode();
     initUserSensor();
-    setupOTA();
     bzero(myName, 0);
     // Serial.printf("myName = %s\r\n", myName);
     delay(100);
-}
-
-void goSleep(uint32_t deepSleepS) {
-    Serial.printf("Go sleep for .. %lu seconds. \r\n", deepSleepS);
-    ESP.deepSleep(1000000 * deepSleepS);
 }
 
 bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
@@ -201,15 +195,13 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
 
 bool isSetupMesh = false;
 void setUpMesh() {
-    // mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION );  // set before init() so that you can see startup messages
+    mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION );  // set before init() so that you can see startup messages
     mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 9,
       PHY_MODE_11G, 82, 1, 4);
     mesh.onReceive(&receivedCallback);
     // Add the task to the mesh scheduler
     mesh.scheduler.addTask(myLoggingTask);
     myLoggingTask.enable();
-    // write reference
-    // readDHTSensor(&temperature_uint32, &humidity_uint32);
 }
 
 
@@ -217,7 +209,7 @@ uint32_t markedTime;
 bool dirty = false;
 
 void loop() {
-    // ArduinoOTA.handle();
+    mesh.update();
     if (runMode == MODE_WEBSERVER) {
       return;
     } else {
@@ -243,7 +235,6 @@ void loop() {
           digitalWrite(LED_BUILTIN, LOW);
           dirty = false;
         }
-        mesh.update();
       }
     }
 }
