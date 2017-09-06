@@ -8,12 +8,7 @@
 #include <SPIFFSEditor.h>
 #include <ArduinoJson.h>
 #include <CMMC_Blink.hpp>
-#include "painlessMesh.h"
 #include "DHT.h"
-
-#define   MESH_PREFIX     "natnatnat"
-#define   MESH_PASSWORD   "tantantan"
-#define   MESH_PORT       5555
 
 AsyncWebServer *server;
 AsyncWebSocket *ws;
@@ -21,36 +16,15 @@ AsyncEventSource *events;
 
 char myName[15];
 int dhtType = 11;
+
 #define LED_BUILTIN 14
 #define BUTTONPIN   0
 #define DHTPIN      12
-#define INTERRUPT_TYPE RISING
 
 DHT *dht;
-painlessMesh  mesh;
-size_t logServerId = 0;
 #include "_user_tasks.hpp"
 // Send message to the logServer every 10 seconds
 bool userReadSensorFlag = false;
-Task myLoggingTask(10000, TASK_FOREVER, []() {
-  userReadSensorFlag = true;
-});
-
-
-void receivedCallback( uint32_t from, String &msg ) {
-  Serial.printf("logClient: Received from %u msg=%s\n", from, msg.c_str());
-  // Saving logServer
-  DynamicJsonBuffer jsonBuffer;
-  JsonObject& root = jsonBuffer.parseObject(msg);
-  if (root.containsKey("topic")) {
-      if (String("logServer").equals(root["topic"].as<String>())) {
-          // check for on: true or false
-          logServerId = root["nodeId"];
-          Serial.printf("logServer detected!!!\n");
-      }
-      Serial.printf("Handled from %u msg=%s\n", from, msg.c_str());
-  }
-}
 
 #include "doconfig.h"
 #include "util.h"
@@ -195,21 +169,12 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
 
 bool isSetupMesh = false;
 void setUpMesh() {
-    mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION );  // set before init() so that you can see startup messages
-    mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, STA_AP, AUTH_WPA2_PSK, 9,
-      PHY_MODE_11G, 82, 1, 4);
-    mesh.onReceive(&receivedCallback);
-    // Add the task to the mesh scheduler
-    mesh.scheduler.addTask(myLoggingTask);
-    myLoggingTask.enable();
 }
-
 
 uint32_t markedTime;
 bool dirty = false;
 
 void loop() {
-    mesh.update();
     if (runMode == MODE_WEBSERVER) {
       return;
     } else {
@@ -220,7 +185,7 @@ void loop() {
         attachInterrupt(LED_BUILTIN, []() {
           dirty = true;
           markedTime = millis();
-        } , INTERRUPT_TYPE);
+        } , RISING);
       } else {
         if (userReadSensorFlag) {
           Serial.println("READ USER SENSOR...");
