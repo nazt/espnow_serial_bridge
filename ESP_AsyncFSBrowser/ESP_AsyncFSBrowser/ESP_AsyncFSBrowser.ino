@@ -1,3 +1,8 @@
+extern "C" {
+  #include <espnow.h>
+  #include <user_interface.h>
+}
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -14,29 +19,23 @@ AsyncWebServer *server;
 AsyncWebSocket *ws;
 AsyncEventSource *events;
 
-char myName[15];
+char myName[12];
 int dhtType = 11;
 
 #define LED_BUILTIN 14
-#define BUTTONPIN   0
+#define BUTTONPIN   2
 #define DHTPIN      12
 
 DHT *dht;
 #include "_user_tasks.hpp"
-// Send message to the logServer every 10 seconds
 bool userReadSensorFlag = false;
-
 #include "doconfig.h"
 #include "util.h"
-extern "C" {
-  #include <espnow.h>
-  #include <user_interface.h>
-}
 
-#define MODE_WEBSERVER 1
-#define MODE_MESH    2
+#define MODE_WEBSERVER  1
+#define MODE_RUNNING    2
 
-int runMode = MODE_MESH;
+int runMode = MODE_RUNNING;
 
 String ssid = "belkin.636";
 String password = "3eb7e66b";
@@ -49,6 +48,7 @@ CMMC_Blink *blinker;
 Ticker ticker;
 bool longPressed = false;
 #include "webserver.h"
+#include "datatypes.h"
 
 void initUserSensor() {
     Serial.println("Initializing dht.");
@@ -66,21 +66,20 @@ void initUserSensor() {
 
     Serial.print("Humidity: ");
     Serial.print(h);
-    Serial.print(" %\t");
+    Serial.print(" %%\t");
     Serial.print("Temperature: ");
     Serial.print(t);
     Serial.print(" *C ");
 }
 
-void waitConfigSignal(uint8_t gpio, bool* longpressed) {
+bool isLongPressed(uint8_t gpio) {
+    bool longPressed = false;
     Serial.println("Checking.....");
     unsigned long _c = millis();
     while(digitalRead(gpio) == LOW) {
       delay(10);
-      // Serial.println("waiting....");
-      // Serial.println(millis() - _c);
       if((millis() - _c) >= 1000L) {
-        *longpressed = true;
+        longPressed = true;
         Serial.println("Release the button to enter config mode   .");
         blinker->blink(50, LED_BUILTIN);
         while(digitalRead(gpio) == LOW) {
@@ -88,15 +87,12 @@ void waitConfigSignal(uint8_t gpio, bool* longpressed) {
           delay(1000);
         }
         blinker->detach();
-        // wifi_status_led_install(2,  PERIPHS_IO_MUX_GPIO2_U, FUNC_GPIO2);
-        // blinker->detach();
-        // blinker->blink(500, LED_BUILTIN);
       }
       else {
-        *longpressed = false;
+        longPressed = false;
       }
     }
-    // Serial.println("/NORMAL");
+    return longPressed;
 }
 
 void startModeConfig() {
@@ -130,6 +126,7 @@ void startModeConfig() {
 
 uint8_t master_mac[6];
 uint8_t slave_mac[6];
+
 void initEspNow() {
   Serial.println("====================");
   Serial.println("   MODE = ESPNOW    ");
@@ -157,44 +154,120 @@ void initEspNow() {
     return;
   }
   Serial.println("SET ROLE SLAVE");
+  static uint32_t recv_counter = 0;
+  static uint32_t send_ok_counter = 0;
+  static uint32_t send_fail_counter = 0;
   esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
-
+  esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
+    recv_counter++;
+    Serial.println(millis());
+    Serial.println("send to mac addr: ");
+    printMacAddress(macaddr);
+    Serial.printf("result = %d \r\n", status);
+    if (status == 0) {
+      send_ok_counter++;
+      Serial.printf("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter,
+        send_ok_counter + send_fail_counter);
+      digitalWrite(LED_BUILTIN, HIGH);
+    }
+    else {
+      send_fail_counter++;
+      Serial.printf("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter,
+        send_ok_counter + send_fail_counter);
+    }
+  });
 }
 
 void checkBootMode() {
     Serial.println("Wating configuration pin..");
     delay(2000);
-    waitConfigSignal(BUTTONPIN, &longPressed);
-    Serial.println("...Done");
-    digitalWrite(LED_BUILTIN, LOW);
-    if (longPressed) {
+    if (isLongPressed(BUTTONPIN)) {
+        // Serial.println("...Done");
+        // digitalWrite(LED_BUILTIN, LOW);
         runMode = MODE_WEBSERVER;
         startModeConfig();
         setupWebServer();
     } else {
         // printAndStoreEspNowMacInfo();
         initEspNow();
-        esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
-        uint8_t recv_counter = 0;
+        sendDataOverEspNow();
+        delay(100);
+        ESP.reset();
     }
 }
 
+static uint32_t checksum(uint8_t *data, size_t len) {
+    uint32_t sum = 0;
+    while(len--) {
+        sum ^= *(data++);
+    }
+    return sum;
+}
+
+bool sendDataOverEspNow() {
+  SENSOR_T sd;
+  bzero(&sd, sizeof(sd));
+  sd.battery = 1;
+  sd.myNameLen = 12;
+  strcpy(sd.myName, myName);
+  sd.fieldLen = 254;
+  sd.field1 = 17;
+  sd.field2 = 18;
+  sd.field3 = 19;
+  sd.field4 = 20;
+  sd.sum = checksum((uint8_t*) &sd, sizeof(sd)-sizeof(sd.sum));
+  u8 bs[sizeof(sd)];
+  memcpy(bs, &sd, sizeof(sd));
+
+  PACKET_T packet;
+  bzero(&packet, sizeof(packet));
+  packet.header[0] = 0xff;
+  packet.header[1] = 0xfa;
+  packet.dataLen = sizeof(sd);
+  packet.data = sd;
+  packet.tail[0] = 0x0d;
+  packet.tail[1] = 0x0a;
+  packet.sum = checksum((uint8_t*) &packet, sizeof(packet)-sizeof(packet.sum));
+
+  u8 pkt[sizeof(packet)];
+  memcpy(pkt, &packet, sizeof (packet));
+
+  byte s = 0;
+  for (size_t i = 0; i < sizeof(bs); i++) {
+    Serial.printf("%02x ", bs[i]);
+    if ((i+1)%4 == 0 && i != 0) {
+      Serial.println();
+    }
+    s = s^bs[i];
+    // Serial.printf("[%0x]", s);
+  }
+
+  Serial.println();
+  for (size_t i = 0; i < sizeof(pkt); i++) {
+    Serial.printf("%02x ", pkt[i]);
+    if ((i+1)%4 == 0 && i != 0) {
+      Serial.println();
+    }
+  }
+
+  return esp_now_send(master_mac, pkt, sizeof(pkt));
+}
+
 void setup() {
+    Serial.begin(115200);
+    Serial.println("begin...");
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
     delay(50);
-    Serial.begin(115200);
-    Serial.setDebugOutput(true);
     SPIFFS.begin();
     WiFi.disconnect();
-    loadConfig(myName, &dhtType);
     delay(10);
-    pinMode(BUTTONPIN, INPUT_PULLUP);
     blinker = new CMMC_Blink();
     blinker->init();
+    pinMode(BUTTONPIN, INPUT_PULLUP);
+
+    loadConfig(myName, &dhtType);
     checkBootMode();
-    bzero(myName, 0);
-    // Serial.printf("myName = %s\r\n", myName);
     delay(100);
 }
 
@@ -226,14 +299,11 @@ void loop() {
       } else {
         if (userReadSensorFlag) {
           Serial.println("READ USER SENSOR...");
-          Serial.println("READ USER SENSOR...");
-          Serial.println("READ USER SENSOR...");
-          Serial.println("READ USER SENSOR...");
           userTaskReadSensor();
           userReadSensorFlag = false;
         }
 
-        if (dirty && (millis() - markedTime > 50)) {
+        if (dirty && ((millis() - markedTime) > 50)) {
           digitalWrite(LED_BUILTIN, LOW);
           dirty = false;
         }

@@ -7,13 +7,17 @@ class CMMC_Blink
 {
   public:
 
+    CMMC_Blink () {
+      this->init();
+    }
     CMMC_Blink init() {
-      this->_ticker = new Ticker();
+      if (this->_ticker = NULL) {
+        this->_ticker = new Ticker();         
+      }
       this->state = LOW;
       this->_initialized = true;
       return *this;
     }
-
 
     void setPin(uint8_t pin) {
       pinMode(_ledPin, OUTPUT);
@@ -52,7 +56,7 @@ class CMMC_Blink
     unsigned int _ledPin = 254;
     bool state;
     bool _initialized = false;
-    Ticker *_ticker;
+    Ticker *_ticker = NULL;
     // auto *callback;
 };
 

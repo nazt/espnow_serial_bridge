@@ -5,6 +5,8 @@
 extern void printMacAddress(uint8_t* macaddr);
 extern int dhtType;
 extern char myName[];
+extern uint8_t master_mac[];
+
 
 bool saveConfig() {
   StaticJsonBuffer<200> jsonBuffer;
@@ -56,7 +58,14 @@ bool loadConfig(char *myName, int *dhtType) {
 
   if (json.containsKey("mac")) {
     const char* mac = json["mac"];
+    String macStr = String(mac);
     Serial.printf("Loaded mac %s\r\n", mac);
+    for (size_t i = 0; i < 12; i+=2) {
+      String mac = macStr.substring(i, i+2);
+      byte b = strtoul(mac.c_str(), 0, 16);
+      master_mac[i/2] = b;
+    }
+    // strcpy(master_mac, mac);
   }
 
   if (json.containsKey("dhtType")) {
@@ -69,7 +78,13 @@ bool loadConfig(char *myName, int *dhtType) {
 
   if (json.containsKey("name")) {
     const char* name = json["name"];
-    strcpy(myName, name);
+    if (strlen(name) > 11) {
+      strncpy(myName, name, 11);
+      myName[11] = '\0';
+    }
+    else {
+      strcpy(myName, name);
+    }
     Serial.printf("Loaded myName = %s\r\n", myName);
   }
   else {
