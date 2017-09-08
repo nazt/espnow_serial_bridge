@@ -2,14 +2,13 @@
 #include <SoftwareSerial.h>
 #include <ESP8266WiFi.h>
 #include <Ticker.h>
+#include "datatypes.h"
 extern "C" {
-#include <espnow.h>
-#include <user_interface.h>
+  #include <espnow.h>
+  #include <user_interface.h>
 }
 #define rxPin 14
 #define txPin 12
-
-
 
 SoftwareSerial swSerial(rxPin, txPin);
 
@@ -35,13 +34,13 @@ uint8_t buff[50];
 
 // SOFTAP_IF
 void printMacAddress(uint8_t* macaddr) {
-  CMMC_DEBUG_PRINT("{");
-  for (int i = 0; i < 6; i++) {
-    CMMC_DEBUG_PRINT("0x");
-    CMMC_DEBUG_PRINT(macaddr[i], HEX);
-    if (i < 5) CMMC_DEBUG_PRINT(',');
-  }
-  CMMC_DEBUG_PRINTLN("};");
+  // CMMC_DEBUG_PRINT("{");
+  // for (int i = 0; i < 6; i++) {
+  //   CMMC_DEBUG_PRINT("0x");
+  //   CMMC_DEBUG_PRINT(macaddr[i], HEX);
+  //   if (i < 5) CMMC_DEBUG_PRINT(',');
+  // }
+  // CMMC_DEBUG_PRINTLN("};");
 }
 
 uint32_t freqCounter = 0;;
@@ -54,7 +53,7 @@ void setup() {
   #endif
 
   ticker.attach_ms(1000, []() {
-    Serial.printf("%d/s\r\n", freqCounter);
+    // Serial.printf("%d/s\r\n", freqCounter);
     freqCounter = 0;
   });
 
@@ -96,23 +95,36 @@ void setup() {
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb([](uint8_t *macaddr, uint8_t *data, uint8_t len) {
     freqCounter++;
-    Serial.println("RECEIVE... ");
-    for (size_t i = 0; i < len; i++) {
-      // Serial.print(data[i], HEX);
-      Serial.printf("%02x ", data[i]);
-      if ((i+1)%4==0) {
-        Serial.println();
-      }
-    }
-    Serial.println();
-    printMacAddress(macaddr);
-    digitalWrite(LED_BUILTIN, ledState);
-    ledState = !ledState;
+    // Serial.println("RECEIVE... ");
+    // PACKET_T pkt;
+    // memcpy(&pkt, data, sizeof(pkt));
+    // SENSOR_T sensor_data = pkt.data;
+    //
+    // for (size_t i = 0; i < len; i++) {
+    //   // Serial.print(data[i], HEX);
+    //   Serial.printf("%02x ", data[i]);
+    //   if ((i+1)%4==0) {
+    //     Serial.println();
+    //   }
+    // }
+    // Serial.println();
+    // Serial.printf("type = %lu\r\n", pkt.type);
+    // Serial.printf("battery = %lu\r\n", sensor_data.battery);
+    // Serial.printf("field1 = %lu\r\n", sensor_data.field1);
+    // Serial.printf("field2 = %lu\r\n", sensor_data.field2);
+    // Serial.printf("field3 = %lu\r\n", sensor_data.field3);
+    // Serial.printf("field4 = %lu\r\n", sensor_data.field4);
+    // Serial.printf("myName= %s\r\n", sensor_data.myName);
 
-    uint8_t *client_slave_macaddr = macaddr;
-    Serial.println();
-    swSerial.write('\r');
-    swSerial.write('\n');
+    // printMacAddress(macaddr);
+    // digitalWrite(LED_BUILTIN, ledState);
+    // ledState = !ledState;
+    //
+    // uint8_t *client_slave_macaddr = macaddr;
+    // Serial.println();
+    // swSerial.write('\r');
+    // swSerial.write('\n');
+    Serial.write(data, len);
   });
 
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
@@ -128,7 +140,7 @@ void setup() {
       CMMC_DEBUG_PRINTLN("ESPNOW: SEND_FAILED");
       fail++;
     }
-    Serial.printf("[SUCCESS] = %lu/%lu \r\n", ok, ok + fail);
+    // Serial.printf("[SUCCESS] = %lu/%lu \r\n", ok, ok + fail);
   });
   // DEBUG_PRINTF("ADD PEER: %d\r\n", add_peer_status);
 }

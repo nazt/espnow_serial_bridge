@@ -158,24 +158,24 @@ void initEspNow() {
   static uint32_t send_ok_counter = 0;
   static uint32_t send_fail_counter = 0;
   esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
-  esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
-    recv_counter++;
-    Serial.println(millis());
-    Serial.println("send to mac addr: ");
-    printMacAddress(macaddr);
-    Serial.printf("result = %d \r\n", status);
-    if (status == 0) {
-      send_ok_counter++;
-      Serial.printf("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter,
-        send_ok_counter + send_fail_counter);
-      digitalWrite(LED_BUILTIN, HIGH);
-    }
-    else {
-      send_fail_counter++;
-      Serial.printf("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter,
-        send_ok_counter + send_fail_counter);
-    }
-  });
+  // esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
+  //   recv_counter++;
+  //   Serial.println(millis());
+  //   Serial.println("send to mac addr: ");
+  //   printMacAddress(macaddr);
+  //   Serial.printf("result = %d \r\n", status);
+  //   if (status == 0) {
+  //     send_ok_counter++;
+  //     Serial.printf("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter,
+  //       send_ok_counter + send_fail_counter);
+  //     digitalWrite(LED_BUILTIN, HIGH);
+  //   }
+  //   else {
+  //     send_fail_counter++;
+  //     Serial.printf("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter,
+  //       send_ok_counter + send_fail_counter);
+  //   }
+  // });
 }
 
 void checkBootMode() {
@@ -250,7 +250,13 @@ bool sendDataOverEspNow() {
     }
   }
 
-  return esp_now_send(master_mac, pkt, sizeof(pkt));
+  bool ret;
+
+  while(1) {
+    esp_now_send(master_mac, pkt, sizeof(pkt));
+    delay(2);
+  }
+  return ret;
 }
 
 void setup() {
