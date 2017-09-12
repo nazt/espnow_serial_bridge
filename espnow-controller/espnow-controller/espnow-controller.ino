@@ -47,7 +47,7 @@ uint32_t freqCounter = 0;;
 
 void setup() {
   #if CMMC_DEBUG_SERIAL
-    Serial.begin(115200);
+    Serial.begin(230400);
     delay(10);
     Serial.flush();
   #endif
@@ -86,20 +86,18 @@ void setup() {
     return;
   }
 
-  swSerial.println("ESPNOW SEND HELLO");
-  swSerial.write("HELLO", 5);
+  // swSerial.println("ESPNOW SEND HELLO");
+  // swSerial.write("HELLO", 5);
 
   bzero(buff, sizeof(buff));
-
-
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb([](uint8_t *macaddr, uint8_t *data, uint8_t len) {
     freqCounter++;
     // Serial.println("RECEIVE... ");
-    // PACKET_T pkt;
-    // memcpy(&pkt, data, sizeof(pkt));
-    // SENSOR_T sensor_data = pkt.data;
-    //
+    PACKET_T pkt;
+    memcpy(&pkt, data, sizeof(pkt));
+    SENSOR_T sensor_data = pkt.data;
+
     // for (size_t i = 0; i < len; i++) {
     //   // Serial.print(data[i], HEX);
     //   Serial.printf("%02x ", data[i]);
@@ -117,14 +115,15 @@ void setup() {
     // Serial.printf("myName= %s\r\n", sensor_data.myName);
 
     // printMacAddress(macaddr);
-    // digitalWrite(LED_BUILTIN, ledState);
-    // ledState = !ledState;
+    digitalWrite(LED_BUILTIN, ledState);
+    ledState = !ledState;
+    Serial.write(data, len);
     //
     // uint8_t *client_slave_macaddr = macaddr;
     // Serial.println();
     // swSerial.write('\r');
     // swSerial.write('\n');
-    Serial.write(data, len);
+    // Serial.write(data, len);
   });
 
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
