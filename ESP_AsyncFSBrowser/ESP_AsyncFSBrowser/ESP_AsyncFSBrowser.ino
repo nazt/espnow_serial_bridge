@@ -230,6 +230,8 @@ bool sendDataOverEspNow() {
   packet.data = sd;
   packet.tail[0] = 0x0d;
   packet.tail[1] = 0x0a;
+  memcpy(&packet.to, master_mac, sizeof(packet.to));
+  memcpy(&packet.from, slave_mac, sizeof(packet.from));
   packet.sum = checksum((uint8_t*) &packet, sizeof(packet)-sizeof(packet.sum));
 
   u8 pkt[sizeof(packet)];
@@ -242,24 +244,25 @@ bool sendDataOverEspNow() {
       Serial.println();
     }
     s = s^bs[i];
-    // Serial.printf("[%0x]", s);
+    // Serial.printf("[%0x]", s)  ;
   }
 
-  Serial.println();
-  for (size_t i = 0; i < sizeof(pkt); i++) {
-    Serial.printf("%02x ", pkt[i]);
-    if ((i+1)%4 == 0 && i != 0) {
-      Serial.println();
-    }
-  }
 
   bool ret;
 
   while(1) {
+    Serial.println();
+    for (size_t i = 0; i < sizeof(pkt); i++) {
+      Serial.printf("%02x ", pkt[i]);
+      if ((i+1)%4 == 0 && i != 0) {
+        Serial.println();
+      }
+    }
+    Serial.println("===========");
     digitalWrite(LED_BUILTIN, ledState);
     esp_now_send(master_mac, pkt, sizeof(pkt));
     ledState = !ledState;
-    delay(2);
+    delay(20);
   }
   return ret;
 }

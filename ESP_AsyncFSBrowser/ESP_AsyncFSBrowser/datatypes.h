@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 typedef struct __attribute((__packed__)) {
-    uint32_t battery;
+    uint16_t battery;
     uint8_t myNameLen;
     char myName[12];
     uint8_t fieldLen;

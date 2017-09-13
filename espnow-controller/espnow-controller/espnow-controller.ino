@@ -6,6 +6,7 @@ extern "C" {
   #include <espnow.h>
   #include <user_interface.h>
 }
+void printMacAddress(uint8_t* );
 bool ledState = LOW;
 Ticker ticker;
 
@@ -36,8 +37,8 @@ void setup() {
   Serial.println();
 
   ticker.attach_ms(1000, []() {
-    Serial.printf("%d/s\r\n", freqCounter);
-    freqCounter = 0;
+    // Serial.printf("%d/s\r\n", freqCounter);
+    // freqCounter = 0;
   });
 
   if (esp_now_init() == 0) {
@@ -51,10 +52,11 @@ void setup() {
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
   esp_now_register_recv_cb([](uint8_t *macaddr, uint8_t *data, uint8_t len) {
     freqCounter++;
-    if (digitalRead(BUTTON_PIN) == LOW) {
+    if (digitalRead(BUTTON_PIN) == HIGH) {
       // PACKET_T pkt;
       // memcpy(&pkt, data, sizeof(pkt));
-      // SENSOR_T sensor_data = pkt.data;
+      // memcpy(&pkt.from, macaddr, 48);
+      // SENSOR_T sensorData = pkt.data;
       Serial.write(data, len);
     }
     digitalWrite(LED_BUILTIN, ledState);
@@ -64,4 +66,15 @@ void setup() {
 
 void loop() {
   yield();
+}
+
+
+void printMacAddress(uint8_t* macaddr) {
+  Serial.print("{");
+  for (int i = 0; i < 6; i++) {
+    Serial.print("0x");
+    Serial.print(macaddr[i], HEX);
+    if (i < 5) Serial.print(',');
+  }
+  Serial.print("};");
 }
