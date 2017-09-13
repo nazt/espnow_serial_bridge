@@ -15,13 +15,15 @@ extern "C" {
 #include <CMMC_Blink.hpp>
 #include "DHT.h"
 
+ADC_MODE(ADC_VCC);
+
 AsyncWebServer *server;
 AsyncWebSocket *ws;
 AsyncEventSource *events;
 
-  static uint32_t recv_counter = 0;
-  static uint32_t send_ok_counter = 0;
-  static uint32_t send_fail_counter = 0;
+static uint32_t recv_counter = 0;
+static uint32_t send_ok_counter = 0;
+static uint32_t send_fail_counter = 0;
 
 
 char myName[12];
@@ -210,10 +212,11 @@ static uint32_t checksum(uint8_t *data, size_t len) {
 bool sendDataOverEspNow() {
   SENSOR_T sd;
   bzero(&sd, sizeof(sd));
-  sd.battery = 1;
+  // sd.battery = analogRead(A0);
+  sd.battery = ESP.getVcc();
   sd.myNameLen = 12;
   strcpy(sd.myName, myName);
-  sd.fieldLen = 254;
+  sd.fieldLen = 4;
   sd.field1 = 17;
   sd.field2 = 18;
   sd.field3 = 19;
@@ -240,6 +243,7 @@ bool sendDataOverEspNow() {
     //     Serial.println();
     //   }
     // }
+    packet.data.battery = analogRead(A0);
     packet.data.field4 = millis();
     packet.sum = checksum((uint8_t*) &packet, sizeof(packet)-sizeof(packet.sum));
 

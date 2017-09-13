@@ -9,7 +9,7 @@ typedef struct __attribute((__packed__)) {
     uint32_t field2;
     uint32_t field3;
     uint32_t field4;
-} SENSOR_T;
+} SENSOR_T  ;
 
 typedef struct __attribute((__packed__)) {
   uint8_t header[2];
