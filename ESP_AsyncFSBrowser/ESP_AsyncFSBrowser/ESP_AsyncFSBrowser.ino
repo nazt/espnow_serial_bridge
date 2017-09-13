@@ -19,12 +19,17 @@ AsyncWebServer *server;
 AsyncWebSocket *ws;
 AsyncEventSource *events;
 
+  static uint32_t recv_counter = 0;
+  static uint32_t send_ok_counter = 0;
+  static uint32_t send_fail_counter = 0;
+
+
 char myName[12];
 int dhtType = 11;
 
-#define LED_BUILTIN 14
-#define BUTTONPIN   2
-#define DHTPIN      12
+#define LED_BUILTIN 2
+#define BUTTONPIN   0
+#define DHTPIN      6
 
 DHT *dht;
 #include "_user_tasks.hpp"
@@ -155,26 +160,23 @@ void initEspNow() {
     return;
   }
   Serial.println("SET ROLE SLAVE");
-  static uint32_t recv_counter = 0;
-  static uint32_t send_ok_counter = 0;
-  static uint32_t send_fail_counter = 0;
   esp_now_set_self_role(ESP_NOW_ROLE_SLAVE);
   esp_now_register_send_cb([](uint8_t* macaddr, uint8_t status) {
     recv_counter++;
-    Serial.println(millis());
-    Serial.println("send to mac addr: ");
-    printMacAddress(macaddr);
-    Serial.printf("result = %d \r\n", status);
+    // Serial.println(millis());
+    // Serial.println("send to mac addr: ");
+    // printMacAddress(macaddr);
+    // Serial.printf("result = %d \r\n", status);
     if (status == 0) {
       send_ok_counter++;
-      Serial.printf("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter,
-        send_ok_counter + send_fail_counter);
+      // Serial.printf("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter,
+      //   send_ok_counter + send_fail_counter);
       // digitalWrite(LED_BUILTIN, HIGH);
     }
     else {
       send_fail_counter++;
-      Serial.printf("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter,
-        send_ok_counter + send_fail_counter);
+      // Serial.printf("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter,
+      //   send_ok_counter + send_fail_counter);
     }
   });
 }
@@ -264,17 +266,25 @@ bool sendDataOverEspNow() {
 
 void setup() {
     Serial.begin(115200);
+    Serial.println();
+    Serial.println("begin...");
+    Serial.println("begin...");
+    Serial.println("begin...");
     Serial.println("begin...");
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
     delay(50);
+    ticker.attach_ms(1000, []() {
+      Serial.printf("%d/s\r\n", recv_counter);
+      recv_counter = 0;
+    });
     SPIFFS.begin();
     WiFi.disconnect();
     delay(10);
     blinker = new CMMC_Blink();
     blinker->init();
     pinMode(BUTTONPIN, INPUT_PULLUP);
-
+    //
     loadConfig(myName, &dhtType);
     checkBootMode();
     delay(100);
@@ -287,7 +297,8 @@ bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
 
 bool isSetupMesh = false;
 void setUpMesh() {
-    initUserSensor();
+    // initUserSensor();
+
 }
 
 uint32_t markedTime;

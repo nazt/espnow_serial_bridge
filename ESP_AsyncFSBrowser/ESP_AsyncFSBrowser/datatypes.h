@@ -15,6 +15,8 @@ typedef struct __attribute((__packed__)) {
 typedef struct __attribute((__packed__)) {
   uint8_t header[2];
   uint8_t reserved;
+  uint8_t from[6];
+  uint8_t to[6];
   uint8_t type;
   uint8_t dataLen;
   SENSOR_T data;
