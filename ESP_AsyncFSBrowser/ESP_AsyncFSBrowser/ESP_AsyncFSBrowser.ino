@@ -218,9 +218,6 @@ bool sendDataOverEspNow() {
   sd.field2 = 18;
   sd.field3 = 19;
   sd.field4 = 20;
-  sd.sum = checksum((uint8_t*) &sd, sizeof(sd)-sizeof(sd.sum));
-  u8 bs[sizeof(sd)];
-  memcpy(bs, &sd, sizeof(sd));
 
   PACKET_T packet;
   bzero(&packet, sizeof(packet));
@@ -232,35 +229,23 @@ bool sendDataOverEspNow() {
   packet.tail[1] = 0x0a;
   memcpy(&packet.to, master_mac, sizeof(packet.to));
   memcpy(&packet.from, slave_mac, sizeof(packet.from));
-  packet.sum = checksum((uint8_t*) &packet, sizeof(packet)-sizeof(packet.sum));
-
-  u8 pkt[sizeof(packet)];
-  memcpy(pkt, &packet, sizeof (packet));
-
-  byte s = 0;
-  for (size_t i = 0; i < sizeof(bs); i++) {
-    Serial.printf("%02x ", bs[i]);
-    if ((i+1)%4 == 0 && i != 0) {
-      Serial.println();
-    }
-    s = s^bs[i];
-    // Serial.printf("[%0x]", s)  ;
-  }
-
 
   bool ret;
 
   while(1) {
     Serial.println();
-    for (size_t i = 0; i < sizeof(pkt); i++) {
-      Serial.printf("%02x ", pkt[i]);
-      if ((i+1)%4 == 0 && i != 0) {
-        Serial.println();
-      }
-    }
+    // for (size_t i = 0; i < sizeof(pkt); i++) {
+    //   Serial.printf("%02x ", pkt[i]);
+    //   if ((i+1)%4 == 0 && i != 0) {
+    //     Serial.println();
+    //   }
+    // }
+    packet.data.field4 = millis();
+    packet.sum = checksum((uint8_t*) &packet, sizeof(packet)-sizeof(packet.sum));
+
     Serial.println("===========");
     digitalWrite(LED_BUILTIN, ledState);
-    esp_now_send(master_mac, pkt, sizeof(pkt));
+    esp_now_send(master_mac, (u8*) &packet, sizeof(packet));
     ledState = !ledState;
     delay(20);
   }

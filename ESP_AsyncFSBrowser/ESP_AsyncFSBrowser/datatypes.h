@@ -9,7 +9,6 @@ typedef struct __attribute((__packed__)) {
     uint32_t field2;
     uint32_t field3;
     uint32_t field4;
-    uint8_t sum;
 } SENSOR_T;
 
 typedef struct __attribute((__packed__)) {
