@@ -21,6 +21,8 @@ AsyncWebServer *server;
 AsyncWebSocket *ws;
 AsyncEventSource *events;
 
+bool espNowSentOkInSendCallback = 0;
+
 static uint32_t recv_counter = 0;
 static uint32_t send_ok_counter = 0;
 static uint32_t send_fail_counter = 0;
@@ -170,12 +172,14 @@ void initEspNow() {
     // printMacAddress(macaddr);
     // Serial.printf("result = %d \r\n", status);
     if (status == 0) {
+      espNowSentOkInSendCallback = 1;
       send_ok_counter++;
       // Serial.printf("... send_cb OK. [%lu/%lu]\r\n", send_ok_counter,
       //   send_ok_counter + send_fail_counter);
       // digitalWrite(LED_BUILTIN, HIGH);
     }
     else {
+      espNowSentOkInSendCallback = 0;
       send_fail_counter++;
       // Serial.printf("... send_cb FAILED. [%lu/%lu]\r\n", send_ok_counter,
       //   send_ok_counter + send_fail_counter);
@@ -222,6 +226,7 @@ bool sendDataOverEspNow() {
   sd.field3 = 19;
   sd.field4 = 20;
 
+
   PACKET_T packet;
   bzero(&packet, sizeof(packet));
   packet.header[0] = 0xff;
@@ -236,7 +241,7 @@ bool sendDataOverEspNow() {
   bool ret;
 
   while(1) {
-    Serial.println();
+    // Serial.println();
     // for (size_t i = 0; i < sizeof(pkt); i++) {
     //   Serial.printf("%02x ", pkt[i]);
     //   if ((i+1)%4 == 0 && i != 0) {
@@ -247,11 +252,32 @@ bool sendDataOverEspNow() {
     packet.data.field4 = millis();
     packet.sum = checksum((uint8_t*) &packet, sizeof(packet)-sizeof(packet.sum));
 
-    Serial.println("===========");
+    // Serial.println("===========");
     digitalWrite(LED_BUILTIN, ledState);
+    // retransmitt when failed
+    #define ESPNOW_RETRY_DELAY 10
+    #define MAX_ESPNOW_RETRIES 30
+    #define DEEP_SLEEP_S 10
+    uint32_t espNowRetries = 1;
+
+    espNowSentOkInSendCallback = 0;
     esp_now_send(master_mac, (u8*) &packet, sizeof(packet));
-    ledState = !ledState;
     delay(20);
+    while (!espNowSentOkInSendCallback) {
+        delay(ESPNOW_RETRY_DELAY);
+        Serial.print("sending packet.. ");
+        Serial.println(espNowRetries);
+        digitalWrite(LED_BUILTIN, ledState);
+        ledState = !ledState;
+        esp_now_send(master_mac, (u8*) &packet, sizeof(packet));
+        espNowRetries++;
+        // sleep after reach max retries.
+        if (espNowRetries > MAX_ESPNOW_RETRIES) {
+            Serial.println("reached max retries..");
+            ESP.reset();
+        }
+    };
+    ledState = !ledState;
   }
   return ret;
 }
@@ -265,32 +291,28 @@ void setup() {
     Serial.println("begin...");
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, HIGH);
-    delay(50);
-    ticker.attach_ms(1000, []() {
-      Serial.printf("%d/s\r\n", recv_counter);
-      recv_counter = 0;
-    });
     SPIFFS.begin();
     WiFi.disconnect();
-    delay(10);
     blinker = new CMMC_Blink();
     blinker->init();
     pinMode(BUTTONPIN, INPUT_PULLUP);
-    //
     loadConfig(myName, &dhtType);
     checkBootMode();
     delay(100);
 }
 
-bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
-  *temp = (uint32_t) dht->readTemperature()*100;
-  *humid = (uint32_t) dht->readHumidity()*100;
-}
+// bool readDHTSensor(uint32_t* temp, uint32_t* humid) {
+//   *temp = (uint32_t) dht->readTemperature()*100;
+//   *humid = (uint32_t) dht->readHumidity()*100;
+// }
 
 bool isSetupMesh = false;
 void setUpMesh() {
-    // initUserSensor();
-
+  Serial.println("setup mesh");
+    ticker.attach_ms(1000, []() {
+      Serial.printf("%d/s\r\n", recv_counter);
+      recv_counter = 0;
+    });
 }
 
 uint32_t markedTime;
@@ -298,7 +320,7 @@ bool dirty = false;
 
 void loop() {
     if (runMode == MODE_WEBSERVER) {
-      return;
+      yield();
     } else {
       if (!isSetupMesh) {
         isSetupMesh = true;
@@ -321,4 +343,9 @@ void loop() {
         }
       }
     }
+}
+
+void goSleep(uint32_t deepSleepS) {
+    Serial.printf("Go sleep for .. %lu seconds. \r\n", deepSleepS);
+    ESP.deepSleep(deepSleepS * 10e6);
 }
